@@ -19,7 +19,7 @@ export class CanvasRenderer {
       antialias: true,
       width: window.innerWidth,
       height: window.innerHeight,
-      backgroundColor: "#FFFFFF"
+      backgroundColor: "#000000"
     });
     this.scene = new Container();
     this.viewport = new Viewport({
@@ -34,7 +34,9 @@ export class CanvasRenderer {
     this.scene.addChild(this.viewport);
 
     for (let i=0; i<1000; i+= 100) {
-      const text = new Text(`${i}`);
+      const text = new Text(`${i}`, {
+        fill: "#FFFFFF"
+      });
       text.x = 10; 
       text.y = i;
       this.viewport.addChild(text);
@@ -121,7 +123,7 @@ export class CanvasRenderer {
           [.25, .45],
         ]
       ];
-      flame.lineStyle(1, "#000000")
+      flame.lineStyle(1, "#FFFFFF")
       drawSegments(flame, flameLines, LANDER_LENGTH);
     }
   }
@@ -135,23 +137,11 @@ export class CanvasRenderer {
     const LANDER_LENGTH = length;
 
     const shuttle = new Graphics();
-    shuttle.lineStyle(1, "#000000");
+    shuttle.lineStyle(1, "#FFFFFF");
     drawSegments(shuttle, SHUTTLE_SEGMENTS, LANDER_LENGTH);
 
     const flame = new Graphics();
     flame.name = "flame";
-
-    const gfx = new Graphics();
-    gfx.beginFill("0xf3d9b1");
-    gfx.drawCircle(0.0, 0.0, shape.radius);
-    gfx.endFill();
-    container.addChild(gfx);
-
-    const gfx2 = new Graphics();
-    gfx2.lineStyle(2, "#000000");
-    gfx2.moveTo(0, -0.5 * LANDER_LENGTH);
-    gfx2.lineTo(0, 0);
-    container.addChild(gfx2);
 
     container.addChild(flame);
     container.addChild(shuttle);
@@ -165,7 +155,7 @@ export class CanvasRenderer {
     assert(shape instanceof Polyline);
     const vertices = Array.from(shape.vertices);
     const gfx = new Graphics();
-    gfx.lineStyle(2, "#000000").moveTo(vertices[0], -vertices[1]);
+    gfx.lineStyle(2, "#FFFFFF").moveTo(vertices[0], -vertices[1]);
     for (let i=2; i<vertices.length; i+= 2) {
       gfx.lineTo(vertices[i], -vertices[i+1]);
     }

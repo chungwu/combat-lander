@@ -34,7 +34,7 @@ export class Lander extends GameObject {
       Rapier.RigidBodyDesc.dynamic()
       .setTranslation(opts.startingLocation.x, opts.startingLocation.y)
     );
-    const colliderDesc = Rapier.ColliderDesc.ball(10);
+    const colliderDesc = Rapier.ColliderDesc.ball(10).setRestitution(0.7);
     const collider = game.world.createCollider(
       colliderDesc,
       body
@@ -87,11 +87,11 @@ export class Lander extends GameObject {
     // Set target rotation
     const rotation = this.rotation;
     if (this.rotatingLeft || this.rotatingRight) {
-      let target = normalizeAngle(this.rotation + TURN_RATE * dt * (this.rotatingLeft ? 1 : -1));
+      let target = this.rotation + TURN_RATE * dt * (this.rotatingLeft ? 1 : -1);
       if (rotation < 0 && target > 0 || rotation > 0 && target < 0) {
         target = 0;
       }
-      this.targetRotation = target;
+      this.targetRotation = normalizeAngle(target);
     } else {
       this.targetRotation = null;
     }
