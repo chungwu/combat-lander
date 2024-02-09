@@ -88,7 +88,6 @@ export class Lander extends GameObject {
       if (rotation < 0 && target > 0 || rotation > 0 && target < 0) {
         target = 0;
       }
-      console.log("TARGET ROTATION", rotation, target);
       this.targetRotation = target;
     } else {
       this.targetRotation = null;
@@ -97,7 +96,6 @@ export class Lander extends GameObject {
     if (this.thrustingUp || this.thrustingDown) {
       let target = this.throttle + THROTTLE_RATE * dt * (this.thrustingUp ? 1 : -1);
       target = Math.max(0, Math.min(1.0, target));
-      console.log("THROTTLE", target);
       this.throttle = target;
     }
 
@@ -105,21 +103,19 @@ export class Lander extends GameObject {
     if (this.throttle !== 0) {
       const force = new Vector2(0, FULL_THROTTLE_FORCE);
       const rotatedForce = rotateVector(force, rotation);
-      console.log("THRUST FORCE", rotatedForce);
       this.body.addForce(rotatedForce, true);
     }
     
     if (this.targetRotation != null && this.targetRotation !== rotation) {
       // Stop any previous rotation from forces
       this.body.setAngvel(0, true);
-      
+
       const targetRotation = this.targetRotation;
       let delta = Math.abs(targetRotation - rotation); 
       delta = Math.min(delta, TURN_RATE * dt);
       const sign = ((rotation > targetRotation && rotation - targetRotation < Math.PI) || (rotation < targetRotation && targetRotation
 				- rotation > Math.PI)) ? -1.0 : 1.0;
       const newRotation = normalizeAngle(rotation + sign * delta);
-      console.log("NEW ROTATION", rotation, newRotation);
       this.body.setRotation(newRotation, true);
     }
   }

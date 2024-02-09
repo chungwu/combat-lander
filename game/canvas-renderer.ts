@@ -109,22 +109,20 @@ export class CanvasRenderer {
     const flame = container.getChildByName("flame");  
     const shape = lander.collider.shape;
     assert(shape instanceof Ball);
-    const length = shape.radius * 2;
-    const LANDER_LENGTH = length;
+    const LANDER_LENGTH = shape.radius * 2;
     assert(shape instanceof Ball);
     if (flame instanceof Graphics) {
       flame.clear();
 
       const flameLines: [number, number][][] = [
         [
-          [-.25 * LANDER_LENGTH, .45 * LANDER_LENGTH],
-          [0 * LANDER_LENGTH, (.45 + lander.throttle) * LANDER_LENGTH],
-          [.25 * LANDER_LENGTH, .45 * LANDER_LENGTH],
+          [-.25, .45],
+          [0, (.45 + lander.throttle)],
+          [.25, .45],
         ]
       ];
       flame.lineStyle(1, "#000000")
-      drawSegments(flame, flameLines);
-      console.log("Updated lander throttle", flameLines, lander.throttle);
+      drawSegments(flame, flameLines, LANDER_LENGTH);
     }
   }
 
@@ -136,75 +134,12 @@ export class CanvasRenderer {
     const length = shape.radius * 2;
     const LANDER_LENGTH = length;
 
+    const shuttle = new Graphics();
+    shuttle.lineStyle(1, "#000000");
+    drawSegments(shuttle, SHUTTLE_SEGMENTS, LANDER_LENGTH);
+
     const flame = new Graphics();
     flame.name = "flame";
-    const flameLines: [number, number][][] = [
-      [
-        [-.25 * LANDER_LENGTH, .45 * LANDER_LENGTH],
-        [0 * LANDER_LENGTH, (.45 + lander.throttle) * LANDER_LENGTH],
-        [.25 * LANDER_LENGTH, .45 * LANDER_LENGTH],
-      ]
-    ];
-    flame.lineStyle(1, "#000000");
-    drawSegments(flame, flameLines);
-
-    const shuttle = new Graphics();
-    const landerSegments: [number, number][][] = [
-      // cockpit
-      [
-        [-.37 * length, 0 * length],
-        [-.43 * LANDER_LENGTH, -.12 * LANDER_LENGTH],
-        [-.38 * LANDER_LENGTH, -.3],
-        [-.3 * LANDER_LENGTH, -.4 * LANDER_LENGTH],
-        [-.1 * LANDER_LENGTH, -.5 * LANDER_LENGTH],
-        [.1 * LANDER_LENGTH, -.5 * LANDER_LENGTH],
-        [.3 * LANDER_LENGTH, -.4 * LANDER_LENGTH],
-        [.38 * LANDER_LENGTH, -.3],
-        [.43 * LANDER_LENGTH, -.12 * LANDER_LENGTH],
-        [.37 * LANDER_LENGTH, 0 * LANDER_LENGTH]
-      ],
-      
-      // Middle section
-      [
-        [-.45 * LANDER_LENGTH, 0 * LANDER_LENGTH],
-        [.45 * LANDER_LENGTH, 0 * LANDER_LENGTH],
-        [.45 * LANDER_LENGTH, .2 * LANDER_LENGTH],
-        [-.45 * LANDER_LENGTH, .2 * LANDER_LENGTH],
-        [-.45 * LANDER_LENGTH, 0 * LANDER_LENGTH]
-      ],
-
-      // Booster
-      [
-        [-.2 * LANDER_LENGTH, .2 * LANDER_LENGTH],
-        [-.3 * LANDER_LENGTH, .45 * LANDER_LENGTH],
-        [.3 * LANDER_LENGTH, .45 * LANDER_LENGTH],
-        [.2 * LANDER_LENGTH, .2 * LANDER_LENGTH],
-        [-.2 * LANDER_LENGTH, .2 * LANDER_LENGTH],
-      ],
-
-      // Legs
-      [ 
-        [.35 * LANDER_LENGTH, .2 * LANDER_LENGTH],
-        [.45 * LANDER_LENGTH, .5 * LANDER_LENGTH],
-      ],
-      [ 
-        [-.35 * LANDER_LENGTH, .2 * LANDER_LENGTH],
-        [-.45 * LANDER_LENGTH, .5 * LANDER_LENGTH],
-      ],
-
-      // Feet
-      [
-        [.5 * LANDER_LENGTH, .5 * LANDER_LENGTH],
-        [.4 * LANDER_LENGTH, .5 * LANDER_LENGTH],
-      ],
-      [ 
-        [-.5 * LANDER_LENGTH, .5 * LANDER_LENGTH],
-        [-.4 * LANDER_LENGTH, .5 * LANDER_LENGTH],
-      ]
-    ];
-
-    shuttle.lineStyle(1, "#000000");
-    drawSegments(shuttle, landerSegments);
 
     const gfx = new Graphics();
     gfx.beginFill("0xf3d9b1");
@@ -229,7 +164,6 @@ export class CanvasRenderer {
     const shape = ground.collider.shape;
     assert(shape instanceof Polyline);
     const vertices = Array.from(shape.vertices);
-    console.log("VERTICES", vertices);
     const gfx = new Graphics();
     gfx.lineStyle(2, "#000000").moveTo(vertices[0], -vertices[1]);
     for (let i=2; i<vertices.length; i+= 2) {
@@ -242,18 +176,72 @@ export class CanvasRenderer {
   }
 }
 
-function drawSegments(gfx: Graphics, segments: [number, number][][]) {
+function drawSegments(gfx: Graphics, segments: [number, number][][], scale: number = 1) {
   for (const section of segments) {
     let first = true;
     for (const vertex of section) {
       if (first) {
-        gfx.moveTo(vertex[0], vertex[1]);
+        gfx.moveTo(vertex[0] * scale, vertex[1] * scale);
         first = false;
       } else {
-        gfx.lineTo(vertex[0], vertex[1]);
+        gfx.lineTo(vertex[0] * scale, vertex[1] * scale);
       }
     }
   }
 }
 
 export default CanvasRenderer;
+
+const SHUTTLE_SEGMENTS: [number, number][][] = [
+  // cockpit
+  [
+    [-.37, 0],
+    [-.43, -.12],
+    [-.38, -.3],
+    [-.3, -.4],
+    [-.1, -.5],
+    [.1, -.5],
+    [.3, -.4],
+    [.38, -.3],
+    [.43, -.12],
+    [.37, 0]
+  ],
+  
+  // Middle section
+  [
+    [-.45, 0],
+    [.45, 0],
+    [.45, .2],
+    [-.45, .2],
+    [-.45, 0]
+  ],
+
+  // Booster
+  [
+    [-.2, .2],
+    [-.3, .45],
+    [.3, .45],
+    [.2, .2],
+    [-.2, .2],
+  ],
+
+  // Legs
+  [ 
+    [.35, .2],
+    [.45, .5],
+  ],
+  [ 
+    [-.35, .2],
+    [-.45, .5],
+  ],
+
+  // Feet
+  [
+    [.5, .5],
+    [.4, .5],
+  ],
+  [ 
+    [-.5, .5],
+    [-.4, .5],
+  ]
+];
