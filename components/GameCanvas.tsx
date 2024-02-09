@@ -1,0 +1,48 @@
+import React from "react";
+import { LanderGameState } from "@/game/game-state";
+import type CanvasRenderer from "@/game/canvas-renderer";
+
+export function GameCanvas(props: {
+  game: LanderGameState;
+}) {
+  const { game } = props;
+
+  const canvasContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const [ renderer, setRenderer ] = React.useState<null | CanvasRenderer>(null);
+
+  React.useEffect(() => {
+    import("@/game/canvas-renderer").then(mod => setRenderer(new mod.CanvasRenderer()))
+  }, []);
+
+  React.useEffect(() => {
+    const container = canvasContainerRef.current;
+    if (container && renderer) {
+      container.appendChild(renderer.canvasElement);
+    }
+  }, [renderer]);
+
+  React.useEffect(() => {
+    if (renderer) {
+      const handler = () => {
+        renderer.resize();
+      };
+      window.addEventListener("resize", handler, false);
+      return () => window.removeEventListener("resize", handler);
+    }
+  }, [renderer]);
+
+  React.useEffect(() => {
+    if (game && renderer) {
+      renderer.render(game);
+      const id = setInterval(() => {
+        renderer.render(game);
+      }, 1000/60);
+      return () => clearInterval(id)
+    }
+  }, [renderer, game])
+
+  return (
+    <div ref={canvasContainerRef} />
+  );
+}
