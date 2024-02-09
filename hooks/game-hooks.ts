@@ -1,40 +1,42 @@
 import { PARTYKIT_HOST } from "@/env";
-import { ClientLanderEngine } from "@/game/engine";
+import { ClientLanderEngine } from "@/game/client-engine";
 import { LanderGameState } from "@/game/game-state";
 import { PACKR } from "@/game/packr";
+import { ServerMessage } from "@/messages";
 import assert from "assert";
 import usePartySocket from "partysocket/react";
 import React from "react";
 
 export function useLanderSocket(roomId: string) {
   const [game, setGame] = React.useState<null | LanderGameState>(null);
+  const [engine, setEngine] = React.useState<null | ClientLanderEngine>(null);
   const socket = usePartySocket({
     host: PARTYKIT_HOST,
     room: roomId,
     async onMessage(event) {
       const buffer = await event.data.arrayBuffer();
-      const data = PACKR.unpack(buffer);
+      const data = PACKR.unpack(buffer) as ServerMessage;
       if (data.type === "init") {
-        setGame(LanderGameState.createFromFull(data.payload));
-      } else if (data.type === "full") {
-        assert(game);
-        game.mergeFull(data.payload);
-      } else if (data.type === "partial") {
-        assert(game);
-        game.mergePartial(data.payload);
+        const game = LanderGameState.createFromFull(data.payload);
+        const engine = new ClientLanderEngine(game, socket, data.time);
+        setGame(game);
+        setEngine(engine);
+      } else {
+        assert(engine);
+        engine.handleMessage(data);
       }
     }
   });
 
   React.useEffect(() => {
-    if (game) {
+    if (game && engine) {
       const keyUpHandler = (event: KeyboardEvent) => {
         event.preventDefault();
         event.stopPropagation();
         if (event.key.startsWith("Arrow")) {
           const key = event.key.replace("Arrow", "").toLowerCase() as any;
           console.log("KEYUP", key);
-          engine.processInput({ type: "keyup", key})
+          engine.processLocalInput({ type: "keyup", key})
         }
       };
       const keyDownHandler = (event: KeyboardEvent) => {
@@ -43,13 +45,12 @@ export function useLanderSocket(roomId: string) {
         if (event.key.startsWith("Arrow")) {
           const key = event.key.replace("Arrow", "").toLowerCase() as any;
           console.log("KEYDOWN", key);
-          engine.processInput({ type: "keydown", key})
+          engine.processLocalInput({ type: "keydown", key})
         }
       };
 
       document.addEventListener("keyup", keyUpHandler);
       document.addEventListener("keydown", keyDownHandler);
-      const engine = new ClientLanderEngine(game, socket);
       const id = setInterval(() => {
         engine.step(); 
       }, 1000/60);
@@ -59,7 +60,7 @@ export function useLanderSocket(roomId: string) {
         clearInterval(id);
       }
     }
-  }, [game, socket]);
+  }, [game, engine, socket]);
 
   return {
     game,

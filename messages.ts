@@ -1,3 +1,4 @@
+import type { LanderGameState } from "./game/game-state";
 
 export type InputEvent = 
   | { type: "keyup", key: "up"|"down"|"left"|"right"}
@@ -6,10 +7,40 @@ export type InputEvent =
 export interface JoinMessage {
   type: "join";
   name: string;
-}
-export interface InputMessage {
-  type: "input";
-  event: InputEvent;
+  time: number;
 }
 
-export type ClientMessage = JoinMessage | InputMessage;
+export interface PlayerInputMessage {
+  type: "input";
+  playerId: string;
+  event: InputEvent;
+  time: number;
+}
+
+export type ClientMessage = JoinMessage | PlayerInputMessage;
+
+export interface InitMessage {
+  type: "init";
+  time: number;
+  payload: FullSerializedGameState;
+}
+
+export interface FullSyncMessage {
+  type: "full";
+  time: number;
+  payload: FullSerializedGameState;
+}
+
+export interface PartialSyncMessage {
+  type: "partial";
+  time: number;
+  payload: ReturnType<typeof LanderGameState.prototype.serializePartial>;
+}
+
+export type ServerMessage = 
+  | InitMessage
+  | FullSyncMessage
+  | PartialSyncMessage
+  | PlayerInputMessage;
+
+export type FullSerializedGameState = ReturnType<typeof LanderGameState.prototype.serializeFull>;

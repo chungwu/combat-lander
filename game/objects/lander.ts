@@ -12,8 +12,11 @@ interface LanderOpts {
 }
 
 const SERIALIZED_FIELDS = [
-  "id", "name", "throttle", "targetRotation", "health", "rotatingLeft", "rotatingRight", "thrustingUp", "thrustingDown"
+  "id", 
+  "name", 
+  "throttle", "targetRotation", "health", "rotatingLeft", "rotatingRight", "thrustingUp", "thrustingDown"
 ] as const;
+SERIALIZED_FIELDS satisfies readonly (keyof Lander)[];
 
 export class Lander extends GameObject {
   public id: string;

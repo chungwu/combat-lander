@@ -66,7 +66,7 @@ export class LanderGameState {
   mergePartial(payload: ReturnType<typeof this.serializePartial>) {
     this.world = payload.world;
     this.ground.updateCollider(this.world);
-    for (const fromLander of this.landers) {
+    for (const fromLander of payload.landers) {
       let lander = this.landers.find(l => l.id === fromLander.id);
       lander?.mergeFrom(this.world, fromLander);
     }
