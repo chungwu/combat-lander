@@ -8,6 +8,8 @@ import assert from "assert";
 import { isServer } from "@/utils/utils";
 import { addVector, rotateVector, scaleVector } from "@/utils/math";
 import { Sky } from "./objects/sky";
+import pull from "lodash/pull";
+import { ROCKET_IMPULSE } from "./constants";
 
 export class LanderGameState {
   public landers: Lander[];
@@ -56,6 +58,17 @@ export class LanderGameState {
     }
   }
 
+  maybeRemoveObjects() {
+    assert(isServer(), `Can only remove game objects on the server`);
+    let removed = false;
+    for (const steppable of this.steppables()) {
+      if (steppable.maybeRemove(this)) {
+        removed = true;
+      }
+    }
+    return removed;
+  }
+
   *steppables() {
     for (const lander of this.landers) {
       yield lander;
@@ -71,7 +84,7 @@ export class LanderGameState {
       if (event.type === "fire-rocket") {
         assert(isServer(), "Can only handle fire-rocket on the server");
         const rocket = Rocket.create(
-          this, lander, { rocketType: event.rocketType }
+          this, lander, { rocketType: event.rocketType, color: lander.color }
         );
         this.rockets.push(rocket);
         this.fireRocket(lander, rocket);
@@ -89,7 +102,7 @@ export class LanderGameState {
     const pos = addVector(
       landerPos, 
       rotateVector(
-        new Vector2(0, -lander.radius - rocketRadius * 2), 
+        new Vector2(0, -lander.radius - rocketRadius - 2), 
         landerAngle
       )
     );
@@ -98,9 +111,13 @@ export class LanderGameState {
     rocket.body.setLinvel(landerVelocity, true);
     rocket.body.setRotation(landerAngle, true);
 
-    const impulse = new Vector2(0, -15000);
-    rocket.body.applyImpulse(rotateVector(scaleVector(impulse, 5), landerAngle), true);
-    lander.body.applyImpulse(rotateVector(scaleVector(impulse, -1), landerAngle), true);
+    // We apply more impulse on the rocket than the lander,
+    // because the rockets are already physically unrealistic
+    // (their mass and size is similar to a lander's) so we need
+    // disporportionally more impulse on it to fire it away
+    const impulse = new Vector2(0, ROCKET_IMPULSE);
+    rocket.body.applyImpulse(rotateVector(scaleVector(impulse, -5), landerAngle), true);
+    lander.body.applyImpulse(rotateVector(scaleVector(impulse, 1), landerAngle), true);
   }
 
   serializeFull() {
@@ -150,6 +167,13 @@ export class LanderGameState {
         curLander.mergeFrom(this.world, fromLander);
       }
     }
+
+    // We also remove landers not in `fromLanders`. This is safe to do, and
+    // there's never any "valid" landers locally that's not in `fromLanders`,
+    // because we never create them locally
+    const validLanderIds = fromLanders.map(l => l.id);
+    const staleLanders = this.landers.filter(l => !validLanderIds.includes(l.id));
+    pull(this.landers, ...staleLanders);
   }
 
   mergeRockets(fromRockets: ReturnType<typeof this.serializeFull>["rockets"]) {
@@ -162,5 +186,9 @@ export class LanderGameState {
         curRocket.mergeFrom(this.world, fromRocket);
       }
     }
+
+    const validRocketIds = fromRockets.map(r => r.id);
+    const staleRockets = this.rockets.filter(r => !validRocketIds.includes(r.id));
+    pull(this.rockets, ...staleRockets);
   }
 }

@@ -211,7 +211,9 @@ export class CanvasRenderer {
     const LANDER_LENGTH = length;
 
     const shuttle = new Graphics();
-    shuttle.lineStyle(1, "#FFFFFF");
+    shuttle.lineStyle(1, lander.color);
+    drawSegments(shuttle, SHUTTLE_COCKPIT, LANDER_LENGTH);
+    shuttle.lineStyle(1, lander.color);
     drawSegments(shuttle, SHUTTLE_SEGMENTS, LANDER_LENGTH);
 
     const flame = new Graphics();
@@ -257,7 +259,7 @@ export class CanvasRenderer {
     const shape = rocket.collider.shape;
     assert(shape instanceof Cuboid);
     const gfx = new Graphics();
-    gfx.lineStyle(1, "#FFFFFF");
+    gfx.lineStyle(1, rocket.color);
     drawSegments(gfx, [[
       [-shape.halfExtents.x, -shape.halfExtents.y],
       [shape.halfExtents.x, -shape.halfExtents.y],
@@ -286,7 +288,7 @@ function drawSegments(gfx: Graphics, segments: [number, number][][], scale: numb
 
 export default CanvasRenderer;
 
-const SHUTTLE_SEGMENTS: [number, number][][] = [
+const SHUTTLE_COCKPIT: [number, number][][] = [
   // cockpit
   [
     [-.37, 0],
@@ -300,6 +302,9 @@ const SHUTTLE_SEGMENTS: [number, number][][] = [
     [.43, -.12],
     [.37, 0]
   ],
+]
+
+const SHUTTLE_SEGMENTS: [number, number][][] = [
   
   // Middle section
   [

@@ -10,11 +10,13 @@ import assert from "assert";
 interface LanderOpts {
   id: string;
   name: string;
+  color: string;
 }
 
 const SERIALIZED_FIELDS = [
   "id", 
   "name", 
+  "color",
   "throttle", "targetRotation", "health", "rotatingLeft", "rotatingRight", "thrustingUp", "thrustingDown"
 ] as const;
 SERIALIZED_FIELDS satisfies readonly (keyof Lander)[];
@@ -22,6 +24,7 @@ SERIALIZED_FIELDS satisfies readonly (keyof Lander)[];
 export class Lander extends GameObject {
   public id: string;
   public name: string;
+  public color: string;
   public throttle: number = 0;
   public targetRotation: number | null = null;
   public health: number = 0;
@@ -45,13 +48,14 @@ export class Lander extends GameObject {
 
   static createFrom(world: World, opts: ReturnType<typeof Lander.prototype.serialize>) {
     const collider = world.getCollider(opts.handle);
-    return new Lander(collider, { id: opts.id, name: opts.name });
+    return new Lander(collider, { id: opts.id, name: opts.name, color: opts.color });
   }
 
   constructor(collider: Collider, opts: LanderOpts) {
     super(collider);
     this.id = opts.id;
     this.name = opts.name;
+    this.color = opts.color;
   }
 
   get radius() {

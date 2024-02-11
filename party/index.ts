@@ -82,7 +82,7 @@ export default class Server implements Party.Server {
   }
 
   private step() {
-    this.engine.step();
+    this.engine.timerStep();
   }
 }
 

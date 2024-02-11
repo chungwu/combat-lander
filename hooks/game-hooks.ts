@@ -52,7 +52,7 @@ export function useLanderSocket(roomId: string) {
       document.addEventListener("keyup", keyUpHandler);
       document.addEventListener("keydown", keyDownHandler);
       const id = setInterval(() => {
-        engine.step(); 
+        engine.timerStep(); 
       }, 1000/60);
       return () => {
         document.removeEventListener("keyup", keyUpHandler);

@@ -1,23 +1,33 @@
-import { ClientMessage, ServerMessage } from "@/messages";
+import { ClientMessage, GameInputEvent, ServerMessage } from "@/messages";
 import { Vector2 } from "@dimforge/rapier2d";
 import { Connection, Room } from "partykit/server";
 import { BaseLanderEngine } from "./engine";
 import { LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
 import { PACKR } from "./packr";
+import { LANDER_COLORS, PARTIAL_SYNC_FREQ, SERVER_SNAPSHOT_FREQ, SERVER_SNAPSHOT_GC_FREQ } from "./constants";
+import random from "lodash/random";
 
 export class ServerLanderEngine extends BaseLanderEngine {
+  private shouldImmediatelyBroadcastSync = false;
+
   constructor(state: LanderGameState, private room: Room) {
-    super(state);
+    super(state, SERVER_SNAPSHOT_FREQ);
   }
 
   private addPlayer(opts: { id: string, name: string }) {
+    const usedColors = this.game.landers.map(s => s.color);
+    let availableColors = LANDER_COLORS.filter(x => !usedColors.includes(x));
+    if (availableColors.length === 0) {
+      availableColors = LANDER_COLORS;
+    }
     const lander = Lander.create(this.game, { 
       ...opts,
       startingLocation: new Vector2(
         Math.random() * this.game.moon.worldWidth, 
         this.game.moon.worldHeight * 0.5
-      )
+      ),
+      color: availableColors[random(0, availableColors.length)]
     });
     this.game.landers.push(lander);
   }
@@ -36,35 +46,29 @@ export class ServerLanderEngine extends BaseLanderEngine {
       });
     } else if (msg.type === "input") {
       this.savePlayerEvent(msg);
+      
       if (msg.time < this.timestep) {
         this.restoreApplyReplay(
-          msg.time - 1,
+          msg.time,
           () => 0
         );
       }
-      if (msg.event.type === "fire-rocket") {
-        console.log(`[${this.timestep}] Special partial for fire-rocket`, this.game.rockets.length)
+      if (this.shouldImmediatelyBroadcastSync) {
+        console.log(`[${this.timestep}] Immediate broadcast`);
         this.broadcast(this.makePartialMessage())
+        this.shouldImmediatelyBroadcastSync = false;
       }
       this.broadcast(msg);
     }
   }
 
-  step() {
-    // If there are player inputs from the future, apply them now
-    // before we step
-    const inputs = this.getPlayerInputsAt(m => m.time === this.timestep);
-    this.applyPlayerInputs(inputs);
-    const shouldImmediatelySendPartial = inputs.some(msg => msg.event.type === "fire-rocket");
+  timerStep() {
+    this.shouldImmediatelyBroadcastSync = false;
 
-    super.step();
-
-    if (this.timestep % SERVER_SNAPSHOT_FREQ === 0) {
-      this.saveSnapshot();
-    }
+    super.timerStep();
 
     // Send partial state update every second
-    if (this.timestep % PARTIAL_UPDATE_FREQ === 0 || shouldImmediatelySendPartial) {
+    if (this.timestep % PARTIAL_SYNC_FREQ === 0 || this.shouldImmediatelyBroadcastSync) {
       this.broadcast(this.makePartialMessage());
     }
 
@@ -72,10 +76,26 @@ export class ServerLanderEngine extends BaseLanderEngine {
     if (this.timestep % SERVER_SNAPSHOT_GC_FREQ === 0) {
       this.garbageCollect(SERVER_SNAPSHOT_GC_FREQ);
     }
+
+    this.shouldImmediatelyBroadcastSync = false;
+  }
+
+  protected postStepOne() {
+    super.postStepOne();
+    if (this.game.maybeRemoveObjects()) {
+      this.shouldImmediatelyBroadcastSync = true;
+    }
   }
 
   private broadcast(msg: ServerMessage) {
     this.room.broadcast(PACKR.pack(msg));
+  }
+
+  protected applyPlayerInput(playerId: string, event: GameInputEvent): void {
+    super.applyPlayerInput(playerId, event);
+    if (event.type === "fire-rocket") {
+      this.shouldImmediatelyBroadcastSync = true;
+    }
   }
 
   private makePartialMessage() {
@@ -86,7 +106,3 @@ export class ServerLanderEngine extends BaseLanderEngine {
     } as const;
   }
 }
-
-const PARTIAL_UPDATE_FREQ = 60; // once per second
-const SERVER_SNAPSHOT_GC_FREQ = 60 * 60; // every 60 seconds
-const SERVER_SNAPSHOT_FREQ = 10; // save snapshot every quarter second

@@ -2,9 +2,9 @@ import { Collider, ColliderDesc, Cuboid, RigidBodyDesc, Vector2, World } from "@
 import { GameObject } from "./objects/game-object";
 import { LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
-import { addVector, rotateVector } from "@/utils/math";
 import pick from "lodash/pick";
 import { nanoid } from "nanoid";
+import pull from "lodash/pull";
 
 export type RocketType = "small" | "big";
 
@@ -12,18 +12,21 @@ const SERIALIZED_FIELDS = [
   "id",
   "ownerLanderId",
   "rocketType", 
-  "numBounces"
+  "aliveSteps",
+  "color"
 ] as const;
 SERIALIZED_FIELDS satisfies readonly (keyof Rocket)[];
 
 export class Rocket extends GameObject {
   public id: string;
   public rocketType: RocketType;
-  public numBounces: number = 0;
   public ownerLanderId: string;
+  public aliveSteps: number = 0;
+  public color: string;
 
   static create(game: LanderGameState, lander: Lander, opts: {
-    rocketType: RocketType
+    rocketType: RocketType;
+    color: string;
   }) {
     const type = opts.rocketType;
     const rocketSize = ROCKET_STATS[type].radius;
@@ -35,6 +38,7 @@ export class Rocket extends GameObject {
     return new Rocket(collider, {
       ownerLanderId:  lander.id,
       rocketType: opts.rocketType,
+      color: opts.color
     });
   }
 
@@ -43,6 +47,7 @@ export class Rocket extends GameObject {
     if (!collider) {
       throw new Error(`NO COLLIDER FOUND!!! ${fromRocket.handle}`)
     }
+    console.log(`CREATED ROCKET`, fromRocket.handle, fromRocket);
     return new Rocket(collider, fromRocket);
   }
 
@@ -50,15 +55,21 @@ export class Rocket extends GameObject {
     id?: string;
     ownerLanderId: string;
     rocketType: RocketType;
+    color: string;
   }) {
     super(collider);
     this.id = opts.id ?? nanoid();
     this.ownerLanderId = opts.ownerLanderId;
     this.rocketType = opts.rocketType;
+    this.color = opts.color;
+  }
+
+  postStep(dt: number) {
+    super.postStep(dt);
+    this.aliveSteps += 1;
   }
 
   serialize() {
-    console.log("ROCKET HANDLE", this.handle, this.body.handle)
     return {
       handle: this.handle,
       ...pick(this, ...SERIALIZED_FIELDS)
@@ -73,6 +84,16 @@ export class Rocket extends GameObject {
     return this.collider.shape as Cuboid;
   }
 
+  maybeRemove(game: LanderGameState): boolean {
+    if (this.aliveSteps >= ROCKET_STATS[this.rocketType].aliveSteps) {
+      pull(game.rockets, this);
+      game.world.removeRigidBody(this.body);
+      return true;
+    }
+
+    return false;
+  }
+
   mergeFrom(world: World, data: ReturnType<typeof this.serialize>) {
     Object.assign(this, pick(data, ...SERIALIZED_FIELDS));
     this.updateCollider(world);
@@ -83,9 +104,11 @@ const ROCKET_STATS = {
   "small": {
     radius: 10,
     initialVelocity: 40,
+    aliveSteps: 60 * 30 // alive for 30s
   },
   "big": {
     radius: 25,
     initialVelocity: 40,
+    aliveSteps: 60 * 30
   } as const
 };

@@ -1,6 +1,7 @@
 import { FullSerializedGameState, GameInputEvent, PlayerInputMessage } from "@/messages";
 import { LanderGameState } from "./game-state";
 import { PACKR } from "./packr";
+import assert from "assert";
 
 export class BaseLanderEngine {
   protected initialTimeStep = 0;
@@ -11,9 +12,10 @@ export class BaseLanderEngine {
 
   constructor(
     protected game: LanderGameState,
+    protected snapshotFreq: number,
   ) {}
 
-  step() {
+  timerStep() {
     const now = performance.now();
     if (this.firstStepTime === 0) {
       this.firstStepTime = now;
@@ -28,9 +30,22 @@ export class BaseLanderEngine {
     }
   }
 
+  protected preStepOne() {
+    this.applyPlayerInputsAt(m => m.time === this.timestep);
+  }
+
+  protected postStepOne() {
+
+  }
+
   protected stepOne() {
+    this.preStepOne();
     this.game.step();
     this.timestep += 1;
+    this.postStepOne();
+    if (this.timestep % this.snapshotFreq === 0) {
+      this.saveSnapshot();
+    }
   }
 
   protected restoreApplyReplay(restoreTime: number, func: () => void) {
@@ -43,7 +58,7 @@ export class BaseLanderEngine {
       if (this.restoreSnapshotTo(restoreTime)) {
         func();
         this.replayTo(curTime);
-        console.log(`[${this.timestep}] REPLAYED TO ${curTime}`);
+        console.log(`[${this.timestep}] REPLAYED TO ${curTime}`, this.game.world);
         return true;
       }
       return false;
@@ -53,7 +68,6 @@ export class BaseLanderEngine {
   protected replayTo(targetTime: number) {
     while (this.timestep < targetTime) {
       this.stepOne();
-      this.applyPlayerInputsAt(m => m.time === this.timestep);
     }
   }
 
@@ -77,14 +91,26 @@ export class BaseLanderEngine {
   }
 
   protected saveSnapshot() {
-    this.snapshots.push({
+    const snapshot = {
       time: this.timestep,
       snapshot: PACKR.pack(this.game.serializeFull())
-    });
+    };
+    if (this.snapshots.length > 0 && this.timestep <= this.snapshots[this.snapshots.length - 1].time) {
+      const index = this.snapshots.findIndex(s => s.time >= this.timestep);
+      assert(index >= 0);
+      if (this.snapshots[index].time === this.timestep) {
+        this.snapshots[index] = snapshot;
+      } else {
+        this.snapshots.splice(index, 0, snapshot);
+      }
+    } else {
+      this.snapshots.push(snapshot);
+    }
   }
 
   protected restoreSnapshot(snapshot: GameSnapshot) {
     const game = PACKR.unpack(snapshot.snapshot) as FullSerializedGameState;
+    console.log(`[${this.timestep}] Restoring to ${snapshot.time}`, game);
     this.game.mergeFull(game);
     this.timestep = snapshot.time;
   }

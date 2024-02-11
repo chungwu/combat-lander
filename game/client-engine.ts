@@ -2,16 +2,20 @@ import { ClientMessage, GameInputEvent, ServerMessage } from "@/messages";
 import PartySocket from "partysocket";
 import { LanderGameState } from "./game-state";
 import { BaseLanderEngine } from "./engine";
+import assert from "assert";
+import { CLIENT_SNAPSHOT_FREQ, CLIENT_SNAPSHOT_GC_FREQ, PARTIAL_SYNC_FREQ } from "./constants";
 
 export class ClientLanderEngine extends BaseLanderEngine {
+  private lastSyncTimestep: number;
   constructor(
     state: LanderGameState,
     private socket: PartySocket,
     initialTimeStep: number,
   ) {
-    super(state);
+    super(state, CLIENT_SNAPSHOT_FREQ);
     this.timestep = initialTimeStep;
-    this.initialTimeStep = initialTimeStep
+    this.initialTimeStep = initialTimeStep;
+    this.lastSyncTimestep = initialTimeStep;
     console.log("STARTING TIMESTAMP", this.timestep);
   }
 
@@ -31,7 +35,6 @@ export class ClientLanderEngine extends BaseLanderEngine {
 
   processLocalInput(event: GameInputEvent) {
     if (this.isPlaying()) {
-      this.applyPlayerInput(this.socket.id, event);
       const msg = {
         type: "input",
         time: this.timestep,
@@ -44,49 +47,60 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   handleMessage(msg: ServerMessage) {
-    console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`);
-    if (msg.type === "full") {
+    console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg, this.game.world);
+    if (msg.type === "full" || msg.type === "partial") {
+      // msg.time should always be > this.lastSyncTimestep as we don't expect
+      // to receive sync messages out of order. It is, however, possible to 
+      // receive the sync twice for the same time step, if there are two player
+      // inputs that fall on the same time step that the server needs to 
+      // immediately broadcast.
+      assert(msg.time >= this.lastSyncTimestep, `[${this.timestep}] Got sync messages out of order? msg.time=${msg.time} but last sync was ${this.lastSyncTimestep}`);
+
+      if (msg.type === "partial" && (this.timestep - msg.time) > PARTIAL_SYNC_FREQ * 2) {
+        // Got a sync message from a long time ago, so that means
+        // we are running pretty behind. Ignore this one so because
+        // there's probably another one in the queue!
+        console.log(`[${this.timestep}] Ignoring partial sync from ${msg.time}`);
+        return;
+      }
       if (msg.time > this.timestep) {
+        // Message is from the future! Catch up to it
         this.replayTo(msg.time);
       }
       this.restoreApplyReplay(
         msg.time,
-        () => this.game.mergeFull(msg.payload)
+        () => msg.type === "full" ? this.game.mergeFull(msg.payload) : this.game.mergePartial(msg.payload)
       );
-    } else if (msg.type === "partial") {
-      if (msg.time > this.timestep) {
-        this.replayTo(msg.time);
-      }
-      this.restoreApplyReplay(
-        msg.time,
-        () => this.game.mergePartial(msg.payload)
-      );
-      console.log("PARTIAL", msg.payload, this.game.serializePartial());
+      this.lastSyncTimestep = msg.time;
     } else if (msg.type === "input") {
       if (msg.playerId !== this.playerId) {
-        this.savePlayerEvent(msg);
-        this.restoreApplyReplay(
-          msg.time - 1,
-          // Don't need to do anything; input will be applied
-          () => 0
-        );
+        // We can ignore player events from ourselves, as we've already applied
+        // those locally.  
+        if (msg.time > this.lastSyncTimestep) {
+          // We can also ignore input events from before the last
+          // sync time step, because the last sync time step had already incorporated
+          // the effect of this event.
+          this.savePlayerEvent(msg);
+          this.restoreApplyReplay(
+            msg.time,
+            // Don't need to do anything; input will be applied
+            () => 0
+          );
+        } else {
+          console.log(`[${this.timestep}] skipping obsolete input event...`)
+        }
       }
     } else if (msg.type === "init") {
       // handled before engine creation
     }
   }
 
-  step() {
+  timerStep() {
     // If there are player inputs from the future, apply them now
     // before we step
     this.applyPlayerInputsAt(m => m.time === this.timestep && m.playerId !== this.playerId);
 
-    super.step();
-
-    // Take snapshot
-    if (this.timestep % CLIENT_SNAPSHOT_FREQ === 0) {
-      this.saveSnapshot();
-    }
+    super.timerStep();
 
     // Garbage collect snapshots
     if (this.timestep % CLIENT_SNAPSHOT_GC_FREQ === 0) {
@@ -102,6 +116,3 @@ export class ClientLanderEngine extends BaseLanderEngine {
     return !!this.game.landers.find(l => l.id === this.socket.id);
   }
 }
-
-const CLIENT_SNAPSHOT_GC_FREQ = 60 * 60 * 3; // every 3 minutes
-const CLIENT_SNAPSHOT_FREQ = 1; // save every snapshot

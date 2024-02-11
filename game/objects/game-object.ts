@@ -1,5 +1,7 @@
-import { ensure } from "@/utils/utils";
+import { ensure, isServer } from "@/utils/utils";
 import { Collider, ColliderDesc, RigidBody, Vector2, World } from "@dimforge/rapier2d";
+import { LanderGameState } from "../game-state";
+import assert from "assert";
 
 export abstract class GameObject {
   constructor(
@@ -24,6 +26,14 @@ export abstract class GameObject {
     return ensure(this.collider.parent());
   }
 
+  get x() {
+    return this.translation.x;
+  }
+
+  get y() {
+    return this.translation.y;
+  }
+
   updateCollider(world: World) {
     const collider = world.getCollider(this.handle);
     if (!collider) {
@@ -45,5 +55,10 @@ export abstract class GameObject {
     } else if (this.translation.x > worldWidth) {
       this.body.setTranslation(new Vector2(this.translation.x - worldWidth, this.translation.y), true);
     }
+  }
+
+  maybeRemove(game: LanderGameState) {
+    assert(isServer(), `Can only remove game objects on the server`);
+    return false;
   }
 }
