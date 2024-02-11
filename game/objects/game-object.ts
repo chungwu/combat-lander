@@ -9,7 +9,7 @@ export abstract class GameObject {
   }
 
   get handle() {
-    return this.collider.handle;
+    return this.body.handle;
   }
 
   get translation() {
@@ -26,6 +26,9 @@ export abstract class GameObject {
 
   updateCollider(world: World) {
     const collider = world.getCollider(this.handle);
+    if (!collider) {
+      throw new Error(`NO COLLIDER FOUND!!! ${this.handle}`);
+    }
     this.collider = collider;
   }
 

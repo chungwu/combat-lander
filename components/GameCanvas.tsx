@@ -4,8 +4,9 @@ import type CanvasRenderer from "@/game/canvas-renderer";
 
 export function GameCanvas(props: {
   game: LanderGameState;
+  playerId: string;
 }) {
-  const { game } = props;
+  const { game, playerId } = props;
 
   const canvasContainerRef = React.useRef<HTMLDivElement>(null);
 
@@ -34,9 +35,11 @@ export function GameCanvas(props: {
 
   React.useEffect(() => {
     if (game && renderer) {
-      renderer.render(game);
+      renderer.render(game, playerId);
       const id = setInterval(() => {
-        renderer.render(game);
+        if (!(globalThis as any).PAUSE_RENDER) {
+          renderer.render(game, playerId);
+        }
       }, 1000/60);
       return () => clearInterval(id)
     }

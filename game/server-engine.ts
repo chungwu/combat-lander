@@ -42,6 +42,10 @@ export class ServerLanderEngine extends BaseLanderEngine {
           () => 0
         );
       }
+      if (msg.event.type === "fire-rocket") {
+        console.log(`[${this.timestep}] Special partial for fire-rocket`, this.game.rockets.length)
+        this.broadcast(this.makePartialMessage())
+      }
       this.broadcast(msg);
     }
   }
@@ -49,7 +53,9 @@ export class ServerLanderEngine extends BaseLanderEngine {
   step() {
     // If there are player inputs from the future, apply them now
     // before we step
-    this.applyPlayerInputsAt(m => m.time === this.timestep);
+    const inputs = this.getPlayerInputsAt(m => m.time === this.timestep);
+    this.applyPlayerInputs(inputs);
+    const shouldImmediatelySendPartial = inputs.some(msg => msg.event.type === "fire-rocket");
 
     super.step();
 
@@ -58,12 +64,8 @@ export class ServerLanderEngine extends BaseLanderEngine {
     }
 
     // Send partial state update every second
-    if (this.timestep % PARTIAL_UPDATE_FREQ === 0) {
-      this.broadcast({
-        type: "partial",
-        time: this.timestep,
-        payload: this.game.serializePartial()
-      });
+    if (this.timestep % PARTIAL_UPDATE_FREQ === 0 || shouldImmediatelySendPartial) {
+      this.broadcast(this.makePartialMessage());
     }
 
     // Garbage collect snapshots every minute
@@ -74,6 +76,14 @@ export class ServerLanderEngine extends BaseLanderEngine {
 
   private broadcast(msg: ServerMessage) {
     this.room.broadcast(PACKR.pack(msg));
+  }
+
+  private makePartialMessage() {
+    return {
+      type: "partial",
+      time: this.timestep,
+      payload: this.game.serializePartial()
+    } as const;
   }
 }
 

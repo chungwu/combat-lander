@@ -17,7 +17,7 @@ export function Room(props: {
     }}>
       {game && (
         <>
-          <GameCanvas game={game}/>
+          <GameCanvas game={game} playerId={socket.id}/>
           <div style={{
             width: "100vw",
             height: "100vh",

@@ -1,8 +1,10 @@
 import type { LanderGameState } from "./game/game-state";
+import type { RocketType } from "./game/rocket";
 
-export type InputEvent = 
+export type GameInputEvent = 
   | { type: "keyup", key: "up"|"down"|"left"|"right"}
   | { type: "keydown", key: "up"|"down"|"left"|"right"}
+  | { type: "fire-rocket", rocketType: RocketType }
 
 export interface JoinMessage {
   type: "join";
@@ -13,7 +15,7 @@ export interface JoinMessage {
 export interface PlayerInputMessage {
   type: "input";
   playerId: string;
-  event: InputEvent;
+  event: GameInputEvent;
   time: number;
 }
 

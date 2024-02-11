@@ -1,4 +1,4 @@
-import { FullSerializedGameState, InputEvent, PlayerInputMessage } from "@/messages";
+import { FullSerializedGameState, GameInputEvent, PlayerInputMessage } from "@/messages";
 import { LanderGameState } from "./game-state";
 import { PACKR } from "./packr";
 
@@ -29,15 +29,7 @@ export class BaseLanderEngine {
   }
 
   protected stepOne() {
-    const world = this.game.world;
-    for (const lander of this.game.landers) {
-      lander.preStep(world.timestep);
-    }
-    this.game.world.step();
-    for (const lander of this.game.landers) {
-      lander.postStep(world.timestep);
-      lander.wrapTranslation(this.game.moon.worldWidth);
-    }
+    this.game.step();
     this.timestep += 1;
   }
 
@@ -66,19 +58,22 @@ export class BaseLanderEngine {
   }
 
   protected applyPlayerInputsAt(pred: (msg: PlayerInputMessage) => boolean) {
-    for (const msg of this.playerInputs) {
-      if (pred(msg)) {
-        console.log(`[${this.timestep}] APPLYING PLAYER INPUT ${msg.playerId.slice(0, 4)} ${msg.time} ${JSON.stringify(msg.event)}`);
-        this.applyPlayerInput(msg.playerId, msg.event);
-      }
+    this.applyPlayerInputs(this.getPlayerInputsAt(pred));
+  }
+  
+  protected applyPlayerInputs(msgs: PlayerInputMessage[]) {
+    for (const msg of msgs) {
+      console.log(`[${this.timestep}] APPLYING PLAYER INPUT ${msg.playerId.slice(0, 4)} ${msg.time} ${JSON.stringify(msg.event)}`);
+      this.applyPlayerInput(msg.playerId, msg.event);
     }
   }
 
-  protected applyPlayerInput(playerId: string, event: InputEvent) {
-    const lander = this.game.landers.find(l => l.id === playerId);
-    if (lander) {
-      lander.processInput(event);
-    }
+  protected getPlayerInputsAt(pred: (msg: PlayerInputMessage) => boolean) {
+    return this.playerInputs.filter(x => pred(x));
+  }
+
+  protected applyPlayerInput(playerId: string, event: GameInputEvent) {
+    this.game.applyPlayerInput(playerId, event);
   }
 
   protected saveSnapshot() {

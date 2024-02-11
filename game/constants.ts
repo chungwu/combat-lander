@@ -5,4 +5,6 @@ export const GRAVITY = -20;
 
 export const TURN_RATE = 0.8; // rad/s
 export const THROTTLE_RATE = 1; // rad/s
-export const FULL_THROTTLE_FORCE = 15000;
+export const FULL_THROTTLE_FORCE = 18000;
+
+export const LANDER_RADIUS = 10;

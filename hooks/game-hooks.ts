@@ -35,8 +35,9 @@ export function useLanderSocket(roomId: string) {
         event.stopPropagation();
         if (event.key.startsWith("Arrow")) {
           const key = event.key.replace("Arrow", "").toLowerCase() as any;
-          console.log("KEYUP", key);
           engine.processLocalInput({ type: "keyup", key})
+        } else if (event.key === "q") {
+          engine.processLocalInput( { type: "fire-rocket", rocketType: "small"});
         }
       };
       const keyDownHandler = (event: KeyboardEvent) => {
@@ -44,7 +45,6 @@ export function useLanderSocket(roomId: string) {
         event.stopPropagation();
         if (event.key.startsWith("Arrow")) {
           const key = event.key.replace("Arrow", "").toLowerCase() as any;
-          console.log("KEYDOWN", key);
           engine.processLocalInput({ type: "keydown", key})
         }
       };

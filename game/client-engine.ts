@@ -1,4 +1,4 @@
-import { ClientMessage, InputEvent, ServerMessage } from "@/messages";
+import { ClientMessage, GameInputEvent, ServerMessage } from "@/messages";
 import PartySocket from "partysocket";
 import { LanderGameState } from "./game-state";
 import { BaseLanderEngine } from "./engine";
@@ -16,12 +16,22 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   private sendMessage(msg: ClientMessage) {
+    console.log(`[${this.timestep}] SENDING: ${msg.type} @ ${msg.time}`)
     this.socket.send(JSON.stringify(msg));
   }
 
-  processLocalInput(event: InputEvent) {
+  protected applyPlayerInput(playerId: string, event: GameInputEvent): void {
+    if (event.type === "fire-rocket") {
+      // We don't apply fire-rocket events in the client, as that is handled
+      // by the server
+    } else {
+      super.applyPlayerInput(playerId, event);
+    }
+  }
+
+  processLocalInput(event: GameInputEvent) {
     if (this.isPlaying()) {
-      super.applyPlayerInput(this.socket.id, event);
+      this.applyPlayerInput(this.socket.id, event);
       const msg = {
         type: "input",
         time: this.timestep,
@@ -51,7 +61,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
         msg.time,
         () => this.game.mergePartial(msg.payload)
       );
-      console.log("LANDERS", JSON.stringify(this.game.landers.map(l => l.serialize())));
+      console.log("PARTIAL", msg.payload, this.game.serializePartial());
     } else if (msg.type === "input") {
       if (msg.playerId !== this.playerId) {
         this.savePlayerEvent(msg);

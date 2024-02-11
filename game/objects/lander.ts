@@ -1,10 +1,11 @@
-import Rapier, { Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
+import Rapier, { Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
 import { LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
-import { FULL_THROTTLE_FORCE, THROTTLE_RATE, TURN_RATE } from "../constants";
+import { FULL_THROTTLE_FORCE, LANDER_RADIUS, THROTTLE_RATE, TURN_RATE } from "../constants";
 import { normalizeAngle, rotateVector } from "@/utils/math";
 import pick from "lodash/pick";
-import { InputEvent } from "@/messages";
+import { GameInputEvent } from "@/messages";
+import assert from "assert";
 
 interface LanderOpts {
   id: string;
@@ -34,7 +35,7 @@ export class Lander extends GameObject {
       Rapier.RigidBodyDesc.dynamic()
       .setTranslation(opts.startingLocation.x, opts.startingLocation.y)
     );
-    const colliderDesc = Rapier.ColliderDesc.ball(10).setRestitution(0.7);
+    const colliderDesc = Rapier.ColliderDesc.ball(LANDER_RADIUS).setRestitution(0.7).setDensity(1);
     const collider = game.world.createCollider(
       colliderDesc,
       body
@@ -53,6 +54,12 @@ export class Lander extends GameObject {
     this.name = opts.name;
   }
 
+  get radius() {
+    const shape = this.collider.shape;
+    assert(shape instanceof Ball);
+    return shape.radius;
+  }
+
   serialize() {
     return {
       handle: this.handle,
@@ -62,11 +69,10 @@ export class Lander extends GameObject {
 
   mergeFrom(world: World, data: ReturnType<typeof this.serialize>) {
     Object.assign(this, pick(data, ...SERIALIZED_FIELDS));
-    const collider = world.getCollider(data.handle);
-    this.collider = collider;
+    this.updateCollider(world);
   }
 
-  processInput(event: InputEvent) {
+  processInput(event: GameInputEvent) {
     if (event.type === "keyup" || event.type === "keydown") {
       const isOn = event.type === "keydown";
       if (event.key === "up") {

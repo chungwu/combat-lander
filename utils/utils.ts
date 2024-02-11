@@ -6,3 +6,7 @@ export function ensure<T>(x: T | null | undefined): T {
   }
   return x;
 }
+
+export function isServer() {
+  return typeof window === "undefined";
+}

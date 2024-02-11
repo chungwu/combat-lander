@@ -15,3 +15,11 @@ export function rotateVector(vec: Vector2, angle: number) {
   const y2 = vec.x * Math.sin(angle) + vec.y * Math.cos(angle);
   return new Vector2(x2, y2);
 }
+
+export function addVector(vec1: Vector2, vec2: Vector2) {
+  return new Vector2(vec1.x + vec2.x, vec1.y + vec2.y);
+}
+
+export function scaleVector(vec: Vector2, scale: number) {
+  return new Vector2(vec.x * scale, vec.y * scale);
+}
