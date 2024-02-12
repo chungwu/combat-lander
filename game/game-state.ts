@@ -1,5 +1,5 @@
 import { GameInputEvent } from "@/messages";
-import { addVector, rotateVector, scaleVector } from "@/utils/math";
+import { addVector, rotateVector, scaleVector, vectorMagnitude } from "@/utils/math";
 import { isServer } from "@/utils/utils";
 import { EventQueue, Vector2, World } from "@dimforge/rapier2d";
 import assert from "assert";
@@ -12,6 +12,7 @@ import { Lander } from "./objects/lander";
 import { Sky } from "./objects/sky";
 import { Rocket } from "./rocket";
 import { nanoid } from "nanoid";
+import { GameObject } from "./objects/game-object";
 
 export class LanderGameState {
   public landers: Lander[];
@@ -19,10 +20,12 @@ export class LanderGameState {
   public ground: Ground;
   public sky: Sky;
   public resetTimestamp: number | undefined;
+  private eventQueue: EventQueue = new EventQueue(true);
 
   static createNew() {
     const moon = generateRandomMap();
     const world = new World(new Vector2(0, moon.gravity));
+    world.numSolverIterations = 1;
     return new LanderGameState(nanoid(), moon, world);
   }
 
@@ -55,17 +58,57 @@ export class LanderGameState {
 
   step() {
     const world = this.world;
+    const dt = world.timestep;
     for (const steppable of this.steppables()) {
-      steppable.preStep(world.timestep);
+      steppable.preStep(dt);
     }
 
-    const queue = new EventQueue(true);
-    this.world.step(queue);
-    
+    this.world.step(this.eventQueue);
+
+    const colliders = this.buildColliderMap();
+    this.eventQueue.drainContactForceEvents(event => {
+      const force = event.maxForceMagnitude() * 0.001;
+      const processCollision = (lander: Lander, obj: GameObject) => {
+        if (!lander.isAlive()) {
+          return;
+        }
+        if (obj instanceof Ground) {
+          lander.takeDamage(force * dt * 2)
+        } else if (obj instanceof Sky) {
+          lander.takeDamage(force * dt * 0.1)
+        } else if (obj instanceof Rocket) {
+          lander.takeDamage(force * dt * 0.5)
+        } else if (obj instanceof Lander) {
+          lander.takeDamage(force * dt * 1)
+        }
+      };
+
+      const obj1 = colliders.get(event.collider1());
+      const obj2 = colliders.get(event.collider2());
+      if (obj1 && obj2) {
+        if (obj1 instanceof Lander) {
+          processCollision(obj1, obj2);
+        }
+        if (obj2 instanceof Lander) {
+          processCollision(obj2, obj1);
+        }
+      }
+    });
+
     for (const steppable of this.steppables()) {
-      steppable.postStep(world.timestep);
+      steppable.postStep(dt);
       steppable.wrapTranslation(this.moon.worldWidth);
     }
+  }
+
+  private buildColliderMap() {
+    const map = new Map<number, GameObject>();
+    map.set(this.ground.handle, this.ground);
+    map.set(this.sky.handle, this.sky);
+    for (const steppable of this.steppables()) {
+      map.set(steppable.handle, steppable);
+    }
+    return map;
   }
 
   maybeRemoveObjects() {
@@ -90,7 +133,7 @@ export class LanderGameState {
 
   applyPlayerInput(playerId: string, event: GameInputEvent) {
     const lander = this.landers.find(l => l.id === playerId);
-    if (lander) {
+    if (lander && lander.isAlive()) {
       if (event.type === "fire-rocket") {
         assert(isServer(), "Can only handle fire-rocket on the server");
         const rocket = Rocket.create(

@@ -4,7 +4,7 @@ import { LanderGameState } from "./game-state";
 import { BaseLanderEngine } from "./engine";
 import assert from "assert";
 import { CLIENT_SNAPSHOT_FREQ, CLIENT_SNAPSHOT_GC_FREQ, PARTIAL_SYNC_FREQ } from "./constants";
-import { computed, makeObservable } from "mobx";
+import { computed, makeObservable, runInAction } from "mobx";
 
 export class ClientLanderEngine extends BaseLanderEngine {
   private lastSyncTimestep: number;
@@ -52,61 +52,63 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   handleMessage(msg: ServerMessage) {
-    if (msg.gameId !== this.game.id && msg.type !== "reset") {
-      return;
-    }
-    console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg, this.game.world);
-    if (msg.type === "full" || msg.type === "partial") {
-      // msg.time should always be > this.lastSyncTimestep as we don't expect
-      // to receive sync messages out of order. It is, however, possible to 
-      // receive the sync twice for the same time step, if there are two player
-      // inputs that fall on the same time step that the server needs to 
-      // immediately broadcast.
-      assert(msg.time >= this.lastSyncTimestep, `[${this.timestep}] Got sync messages out of order? msg.time=${msg.time} but last sync was ${this.lastSyncTimestep}`);
-
-      if (msg.type === "partial" && (this.timestep - msg.time) > PARTIAL_SYNC_FREQ * 2) {
-        // Got a sync message from a long time ago, so that means
-        // we are running pretty behind. Ignore this one so because
-        // there's probably another one in the queue!
-        console.log(`[${this.timestep}] Ignoring partial sync from ${msg.time}`);
+    runInAction(() => {
+      if (msg.gameId !== this.game.id && msg.type !== "reset") {
         return;
       }
-      if (msg.time > this.timestep) {
-        // Message is from the future! Catch up to it
-        this.replayTo(msg.time);
-      }
-      this.restoreApplyReplay(
-        msg.time,
-        () => msg.type === "full" ? this.game.mergeFull(msg.payload) : this.game.mergePartial(msg.payload)
-      );
-      this.lastSyncTimestep = msg.time;
-    } else if (msg.type === "input") {
-      if (msg.playerId !== this.playerId) {
-        // We can ignore player events from ourselves, as we've already applied
-        // those locally.  
-        if (msg.time > this.lastSyncTimestep) {
-          // We can also ignore input events from before the last
-          // sync time step, because the last sync time step had already incorporated
-          // the effect of this event.
-          this.savePlayerEvent(msg);
-          this.restoreApplyReplay(
-            msg.time,
-            // Don't need to do anything; input will be applied
-            () => 0
-          );
-        } else {
-          console.log(`[${this.timestep}] skipping obsolete input event...`)
+      console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg, this.game.world);
+      if (msg.type === "full" || msg.type === "partial") {
+        // msg.time should always be > this.lastSyncTimestep as we don't expect
+        // to receive sync messages out of order. It is, however, possible to 
+        // receive the sync twice for the same time step, if there are two player
+        // inputs that fall on the same time step that the server needs to 
+        // immediately broadcast.
+        assert(msg.time >= this.lastSyncTimestep, `[${this.timestep}] Got sync messages out of order? msg.time=${msg.time} but last sync was ${this.lastSyncTimestep}`);
+  
+        if (msg.type === "partial" && (this.timestep - msg.time) > PARTIAL_SYNC_FREQ * 2) {
+          // Got a sync message from a long time ago, so that means
+          // we are running pretty behind. Ignore this one so because
+          // there's probably another one in the queue!
+          console.log(`[${this.timestep}] Ignoring partial sync from ${msg.time}`);
+          return;
         }
+        if (msg.time > this.timestep) {
+          // Message is from the future! Catch up to it
+          this.replayTo(msg.time);
+        }
+        this.restoreApplyReplay(
+          msg.time,
+          () => msg.type === "full" ? this.game.mergeFull(msg.payload) : this.game.mergePartial(msg.payload)
+        );
+        this.lastSyncTimestep = msg.time;
+      } else if (msg.type === "input") {
+        if (msg.playerId !== this.playerId) {
+          // We can ignore player events from ourselves, as we've already applied
+          // those locally.  
+          if (msg.time > this.lastSyncTimestep) {
+            // We can also ignore input events from before the last
+            // sync time step, because the last sync time step had already incorporated
+            // the effect of this event.
+            this.savePlayerEvent(msg);
+            this.restoreApplyReplay(
+              msg.time,
+              // Don't need to do anything; input will be applied
+              () => 0
+            );
+          } else {
+            console.log(`[${this.timestep}] skipping obsolete input event...`)
+          }
+        }
+      } else if (msg.type === "init") {
+        // handled before engine creation
+      } else if (msg.type === "reset") {
+        this.reset();
+        this.game.mergeFull(msg.paylod);
+        this.initialTimeStep = this.timestep = this.lastSyncTimestep = msg.time;
+      } else if (msg.type === "meta") {
+        this.game.mergeMeta(msg.payload);
       }
-    } else if (msg.type === "init") {
-      // handled before engine creation
-    } else if (msg.type === "reset") {
-      this.reset();
-      this.game.mergeFull(msg.paylod);
-      this.initialTimeStep = this.timestep = this.lastSyncTimestep = msg.time;
-    } else if (msg.type === "meta") {
-      this.game.mergeMeta(msg.payload);
-    }
+    });
   }
 
   timerStep() {

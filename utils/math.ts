@@ -23,3 +23,7 @@ export function addVector(vec1: Vector2, vec2: Vector2) {
 export function scaleVector(vec: Vector2, scale: number) {
   return new Vector2(vec.x * scale, vec.y * scale);
 }
+
+export function vectorMagnitude(vector: Vector2) {
+  return Math.sqrt(Math.pow(vector.x, 2) + Math.pow(vector.y, 2));
+}

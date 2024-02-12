@@ -1,4 +1,4 @@
-import Rapier, { Collider, World } from "@dimforge/rapier2d";
+import Rapier, { ActiveCollisionTypes, ActiveEvents, Collider, World } from "@dimforge/rapier2d";
 import { LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
 

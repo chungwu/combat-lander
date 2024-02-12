@@ -1,4 +1,4 @@
-import Rapier, { Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
+import Rapier, { ActiveCollisionTypes, ActiveEvents, Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
 import { LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
 import { FULL_THROTTLE_FORCE, LANDER_RADIUS, LanderColor, THROTTLE_RATE, TURN_RATE } from "../constants";
@@ -27,7 +27,7 @@ export class Lander extends GameObject {
   public color: LanderColor;
   public throttle: number = 0;
   public targetRotation: number | null = null;
-  public health: number = 0;
+  public health: number = 100;
   public rotatingLeft = false;
   public rotatingRight = false;
   public thrustingUp = false;
@@ -38,7 +38,7 @@ export class Lander extends GameObject {
       Rapier.RigidBodyDesc.dynamic()
       .setTranslation(opts.startingLocation.x, opts.startingLocation.y)
     );
-    const colliderDesc = Rapier.ColliderDesc.ball(LANDER_RADIUS).setRestitution(0.7).setDensity(1);
+    const colliderDesc = Rapier.ColliderDesc.ball(LANDER_RADIUS).setRestitution(0.7).setDensity(1).setActiveEvents(ActiveEvents.CONTACT_FORCE_EVENTS | ActiveEvents.COLLISION_EVENTS).setContactForceEventThreshold(0);
     const collider = game.world.createCollider(
       colliderDesc,
       body
@@ -77,19 +77,37 @@ export class Lander extends GameObject {
   }
 
   processInput(event: GameInputEvent) {
-    if (event.type === "thrust") {
-      if (event.dir === "up") {
-        this.thrustingUp = event.active;
-      } else if (event.dir === "down") {
-        this.thrustingDown = event.active;
-      }
-    } else if (event.type === "rotate") {
-      if (event.dir === "left") {
-        this.rotatingLeft = event.active;
-      } else if (event.dir === "right") {
-        this.rotatingRight = event.active;
+    if (this.isAlive()) {
+      if (event.type === "thrust") {
+        if (event.dir === "up") {
+          this.thrustingUp = event.active;
+        } else if (event.dir === "down") {
+          this.thrustingDown = event.active;
+        }
+      } else if (event.type === "rotate") {
+        if (event.dir === "left") {
+          this.rotatingLeft = event.active;
+        } else if (event.dir === "right") {
+          this.rotatingRight = event.active;
+        }
       }
     }
+  }
+
+  takeDamage(damage: number) {
+    this.health = Math.max(0, this.health - damage);
+    if (this.health === 0) {
+      this.throttle = 0;
+      this.thrustingDown = false;
+      this.thrustingUp = false;
+      this.targetRotation = null;
+      this.rotatingLeft = false;
+      this.rotatingRight = false;
+    }
+  }
+
+  isAlive() {
+    return this.health > 0;
   }
 
   preStep(dt: number) {

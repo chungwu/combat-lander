@@ -1,5 +1,9 @@
 import { amberDark, blueDark, bronzeDark, crimsonDark, cyanDark, grassDark, greenDark, indigoDark, irisDark, jadeDark, limeDark, mintDark, orangeDark, pinkDark, plumDark, purpleDark, rubyDark, skyDark, tealDark, violetDark, yellowDark } from "@radix-ui/colors"
 
+// Game mechanics
+export const RESET_GAME_WAIT = 5 // 5 seconds 
+
+// Map mechanics
 export const WORLD_WIDTH = 1000;
 export const WORLD_HEIGHT = 1000;
 export const GRAVITY = -40;

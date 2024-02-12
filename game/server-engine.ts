@@ -5,7 +5,7 @@ import { BaseLanderEngine } from "./engine";
 import { LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
 import { PACKR } from "./packr";
-import { LANDER_COLORS, LanderColor, PARTIAL_SYNC_FREQ, SERVER_SNAPSHOT_FREQ, SERVER_SNAPSHOT_GC_FREQ } from "./constants";
+import { LANDER_COLORS, LanderColor, PARTIAL_SYNC_FREQ, RESET_GAME_WAIT, SERVER_SNAPSHOT_FREQ, SERVER_SNAPSHOT_GC_FREQ } from "./constants";
 import random from "lodash/random";
 import pull from "lodash/pull";
 
@@ -73,7 +73,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
       this.broadcast(msg);
     } else if (msg.type === "request-reset") {
       // Reset in 10 seconds
-      const waitTime = 1000 * 10;
+      const waitTime = 1000 * RESET_GAME_WAIT;
       this.game.resetTimestamp = new Date().getTime() + waitTime;
       this.broadcast(this.makeMetaMessage());
       setTimeout(() => {

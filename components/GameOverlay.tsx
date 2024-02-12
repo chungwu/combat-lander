@@ -71,10 +71,10 @@ const ResetGameButton = observer(function ResetGameButton(props: {
 
 function TimerTill(props: { target: number }) {
   const { target } = props;
-  const [secondsLeft, setSecondsLeft] = React.useState(Math.floor((target - new Date().getTime()) / 1000));
+  const [secondsLeft, setSecondsLeft] = React.useState(Math.ceil((target - new Date().getTime()) / 1000));
   React.useEffect(() => {
     const id = setInterval(() => {
-      const left = Math.floor((target - new Date().getTime()) / 1000);
+      const left = Math.ceil((target - new Date().getTime()) / 1000);
       if (left !== secondsLeft) {
         setSecondsLeft(left);
       }

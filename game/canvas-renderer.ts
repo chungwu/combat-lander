@@ -11,6 +11,7 @@ import { Rocket } from "./rocket";
 import { Sky } from "./objects/sky";
 import { MONO } from "@/fonts";
 import { Moon } from "./map";
+import { tomatoDark } from "@radix-ui/colors";
 
 type RenderedObjects = [Container, Container, Container];
 
@@ -278,6 +279,10 @@ export class CanvasRenderer {
       flame.lineStyle(1, "#FFFFFF")
       drawSegments(flame, flameLines, LANDER_LENGTH);
     }
+
+    if (!lander.isAlive()) {
+      container.alpha = 0.5;
+    }
   }
 
   private updateLanderLabel(lander: Lander, gfx: DisplayObject) {
@@ -287,6 +292,16 @@ export class CanvasRenderer {
       if (landerName.text !== lander.name) {
         landerName.text = lander.name;
       }
+    }
+    const landerHealth = gfx.getChildByName("landerHealth");
+    if (landerHealth instanceof Text) {
+      if (landerHealth.text !== `${Math.ceil(lander.health)}`) {
+        landerHealth.text = `${Math.ceil(lander.health)}`;
+      }
+    }
+
+    if (!lander.isAlive()) {
+      gfx.alpha = 0.5;
     }
   }
 
@@ -325,6 +340,17 @@ export class CanvasRenderer {
     landerName.position.y = -3;
     landerName.position.x = lander.radius + 10;
     container.addChild(landerName);
+
+    const landerHealth = new Text(Math.ceil(lander.health), {
+      fontSize: "10px",
+      fill: tomatoDark.tomato10,
+      fontFamily: MONO.style.fontFamily
+    });
+    landerHealth.name = "landerHealth";
+    landerHealth.position.y = -lander.radius - 10;
+    landerHealth.position.x = -lander.radius - 10;
+    container.addChild(landerHealth);
+
     this.screenRoot.addChild(container);
     return container;
   }

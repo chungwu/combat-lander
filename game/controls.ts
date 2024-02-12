@@ -28,7 +28,7 @@ export class KeyboardController {
     }
 
     const arrowKey = this.deriveArrowKeyDirection(event.key);
-    if (arrowKey) {
+    if (arrowKey && lander.isAlive()) {
       if (arrowKey === "up" && !lander.thrustingUp && lander.throttle < 1) {
         this.engine.processLocalInput({
           type: "thrust", dir: "up", active: true
@@ -55,7 +55,7 @@ export class KeyboardController {
       return;
     }
     const arrowKey = this.deriveArrowKeyDirection(event.key);
-    if (arrowKey) {
+    if (arrowKey && lander.isAlive()) {
       if (arrowKey === "up" && lander.thrustingUp) {
         this.engine.processLocalInput({
           type: "thrust", dir: "up", active: false
@@ -81,7 +81,7 @@ export class KeyboardController {
       return;
     }
 
-    if (event.key === "q") {
+    if (event.key === "q" && this.selfLander.isAlive()) {
       this.engine.processLocalInput({
         type: "fire-rocket", rocketType: "small"
       });
