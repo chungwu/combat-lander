@@ -77,16 +77,17 @@ export class Lander extends GameObject {
   }
 
   processInput(event: GameInputEvent) {
-    if (event.type === "keyup" || event.type === "keydown") {
-      const isOn = event.type === "keydown";
-      if (event.key === "up") {
-        this.thrustingUp = isOn;
-      } else if (event.key === "down") {
-        this.thrustingDown = isOn;
-      } else if (event.key === "left") {
-        this.rotatingLeft = isOn;
-      } else if (event.key === "right") {
-        this.rotatingRight = isOn;
+    if (event.type === "thrust") {
+      if (event.dir === "up") {
+        this.thrustingUp = event.active;
+      } else if (event.dir === "down") {
+        this.thrustingDown = event.active;
+      }
+    } else if (event.type === "rotate") {
+      if (event.dir === "left") {
+        this.rotatingLeft = event.active;
+      } else if (event.dir === "right") {
+        this.rotatingRight = event.active;
       }
     }
   }

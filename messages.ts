@@ -7,8 +7,8 @@ interface Message {
 }
 
 export type GameInputEvent = 
-  | { type: "keyup", key: "up"|"down"|"left"|"right"}
-  | { type: "keydown", key: "up"|"down"|"left"|"right"}
+  | { type: "thrust", dir: "up" | "down", active: boolean }
+  | { type: "rotate", dir: "left" | "right", active: boolean }
   | { type: "fire-rocket", rocketType: RocketType }
 
 export interface JoinMessage extends Message {

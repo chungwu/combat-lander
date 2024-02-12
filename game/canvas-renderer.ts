@@ -322,7 +322,7 @@ export class CanvasRenderer {
       fontFamily: MONO.style.fontFamily
     });
     landerName.name = "landerName";
-    landerName.position.y = 0;
+    landerName.position.y = -3;
     landerName.position.x = lander.radius + 10;
     container.addChild(landerName);
     this.screenRoot.addChild(container);

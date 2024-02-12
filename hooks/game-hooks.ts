@@ -1,5 +1,6 @@
 import { PARTYKIT_HOST } from "@/env";
 import { ClientLanderEngine } from "@/game/client-engine";
+import { KeyboardController } from "@/game/controls";
 import { LanderGameState } from "@/game/game-state";
 import { PACKR } from "@/game/packr";
 import { ServerMessage } from "@/messages";
@@ -31,33 +32,13 @@ export function useLanderSocket(roomId: string) {
 
   React.useEffect(() => {
     if (game && engine) {
-      const keyUpHandler = (event: KeyboardEvent) => {
-        // event.preventDefault();
-        // event.stopPropagation();
-        if (event.key.startsWith("Arrow")) {
-          const key = event.key.replace("Arrow", "").toLowerCase() as any;
-          engine.processLocalInput({ type: "keyup", key})
-        } else if (event.key === "q") {
-          engine.processLocalInput( { type: "fire-rocket", rocketType: "small"});
-        }
-      };
-      const keyDownHandler = (event: KeyboardEvent) => {
-        // event.preventDefault();
-        // event.stopPropagation();
-        if (event.key.startsWith("Arrow")) {
-          const key = event.key.replace("Arrow", "").toLowerCase() as any;
-          engine.processLocalInput({ type: "keydown", key})
-        }
-      };
-
-      document.addEventListener("keyup", keyUpHandler);
-      document.addEventListener("keydown", keyDownHandler);
+      const controller = new KeyboardController(engine);
+      controller.install();
       const id = setInterval(() => {
         engine.timerStep(); 
       }, 1000/60);
       return () => {
-        document.removeEventListener("keyup", keyUpHandler);
-        document.removeEventListener("keydown", keyDownHandler);
+        controller.uninstall();
         clearInterval(id);
       }
     }

@@ -37,7 +37,8 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   processLocalInput(event: GameInputEvent) {
-    if (this.isPlaying) {
+    const lander = this.selfLander;
+    if (lander) {
       const msg = {
         type: "input",
         time: this.timestep,
