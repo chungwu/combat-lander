@@ -1,4 +1,4 @@
-import { Renderer, Container, Graphics, Text } from "pixi.js";
+import { Renderer, Container, Graphics, Text, settings, DisplayObject } from "pixi.js";
 import { Viewport } from "pixi-viewport";
 import { LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
@@ -6,24 +6,29 @@ import { Ball, Cuboid, Polyline, ShapeType } from "@dimforge/rapier2d";
 import assert from "assert";
 import { Ground } from "./objects/ground";
 import { GameObject } from "./objects/game-object";
-import { WORLD_WIDTH } from "./constants";
+import { WORLD_WIDTH, getLanderColor } from "./constants";
 import { Rocket } from "./rocket";
 import { Sky } from "./objects/sky";
+import { MONO } from "@/fonts";
+
+type RenderedObjects = [Container, Container, Container];
 
 export class CanvasRenderer {
-  handle2gfx: Map<number, Graphics | Container>;
-  handle2Shadows: Map<number, [Container, Container]>;
+  handle2gfx: Map<number, RenderedObjects>;
+  handle2label: Map<number, DisplayObject | null>;
   renderer: Renderer;
   scene: Container;
   viewport: Viewport;
   constructor() {
     this.handle2gfx = new Map();
-    this.handle2Shadows = new Map();
+    this.handle2label = new Map();
     this.renderer = new Renderer({
       antialias: true,
       width: window.innerWidth,
       height: window.innerHeight,
-      backgroundColor: "#000000"
+      backgroundColor: "#000000",
+      resolution: window.devicePixelRatio,
+      autoDensity: true
     });
     this.scene = new Container();
     this.viewport = new Viewport({
@@ -37,15 +42,9 @@ export class CanvasRenderer {
 
     this.scene.addChild(this.viewport);
 
-    for (let i=0; i<1000; i+= 100) {
-      const text = new Text(`${i}`, {
-        fill: "#FFFFFF",
-        fontSize: 12
-      });
-      text.x = 10; 
-      text.y = i;
-      this.scene.addChild(text);
-    }
+    const legend = new Container();
+    legend.name = "legend";
+    this.scene.addChild(legend);
 
     (globalThis as any).__PIXI_STAGE__ = this.scene;
     (globalThis as any).__PIXI_RENDERER__ = this.renderer;
@@ -56,71 +55,106 @@ export class CanvasRenderer {
     return this.renderer.view as HTMLCanvasElement;
   }
 
+  private updateLegend() {
+    const legend = this.scene.getChildByName("legend");
+    if (legend) {
+      assert(legend instanceof Container);
+      legend.removeChildren();
+      for (let i=0; i<1000; i+= 100) {
+        const text = new Text(`${i}`, {
+          fill: "#FFFFFF",
+          fontSize: 12,
+          fontFamily: MONO.style.fontFamily
+        });
+        text.x = 10; 
+        text.y = this.viewport.toScreen(0, i).y;
+        legend.addChild(text);
+      }
+    }
+  }
+
   resize() {
     this.renderer.resize(window.innerWidth, window.innerHeight);
     this.viewport.screenWidth = window.innerWidth;
     this.viewport.screenHeight = window.innerHeight;
   }
 
-  render(state: LanderGameState, playerId: string | undefined) {
-    this.updateViewport(state, playerId);
+  render(game: LanderGameState, playerId: string | undefined) {
+    this.updateViewport(game, playerId);
     const seenHandles = new Set<number>();
 
     const handleObject = (object: GameObject) => {
       seenHandles.add(object.handle);
-      let gfx = this.handle2gfx.get(object.handle);
-      let shadows = this.handle2Shadows.get(object.handle);
-      if (!gfx) {
-        gfx = this.createObjectGraphics(object);
-        this.handle2gfx.set(object.handle, gfx);
-      }
-      if (!shadows) {
+      let gfxs = this.handle2gfx.get(object.handle);
+      if (!gfxs) {
+        const main = this.createObjectGraphics(object);
         const left = this.createObjectGraphics(object);
         const right = this.createObjectGraphics(object);
-        shadows = [left, right];
-        this.handle2Shadows.set(object.handle, shadows);
+        gfxs = [main, left, right];
+        this.handle2gfx.set(object.handle, gfxs);
+      } else {
+        const [main, left, right] = gfxs;
+        this.updateObjectGraphics(object, main);
+        this.updateObjectGraphics(object, left);
+        this.updateObjectGraphics(object, right);
       }
-      const [ left, right ] = shadows;
-      this.updateObjectGraphics(object, gfx);
-      this.updateObjectGraphics(object, left);
-      this.updateObjectGraphics(object, right);
+      updateObjectGraphicsPositions(object, gfxs);
       
-      const translation = object.collider.translation();
+      if (!this.handle2label.has(object.handle)) {
+        const label = this.createObjectLabel(object);
+        if (label) {
+          this.handle2label.set(object.handle, label);
+        } else {
+          this.handle2label.set(object.handle, null);
+        }
+      }
+      const label = this.handle2label.get(object.handle);
+      if (label) {
+        this.updateObjectLabel(object, label);
+        updateObjectLabelPositions(game, object, label);
+      }
+    };
+
+    const updateObjectGraphicsPositions = (object: GameObject, gfxs: RenderedObjects) => {
+      const [ main, left, right ] = gfxs;
       const rotation = object.collider.rotation();
 
-      gfx.position.x = translation.x;
-      left.position.x = gfx.position.x - state.moon.worldWidth;
-      right.position.x = gfx.position.x + state.moon.worldWidth;
+      main.position.x = object.x;
+      left.position.x = main.position.x - game.moon.worldWidth;
+      right.position.x = main.position.x + game.moon.worldWidth;
 
-      gfx.position.y = left.position.y = right.position.y = this.viewport.worldHeight - translation.y;
-      gfx.rotation = left.rotation = right.rotation = -rotation;
+      main.position.y = left.position.y = right.position.y = this.viewport.worldHeight - object.y;
+      main.rotation = left.rotation = right.rotation = -rotation;
+    };
+
+    const updateObjectLabelPositions = (game: LanderGameState, object: GameObject, label: DisplayObject) => {
+      const screenPos = this.viewport.toScreen(
+        object.x, game.moon.worldHeight - object.y
+      );
+      label.position.x = screenPos.x;
+      label.position.y = screenPos.y;
     };
     
-    handleObject(state.ground);
-    handleObject(state.sky);
-    for (const lander of state.landers) {
+    handleObject(game.ground);
+    handleObject(game.sky);
+    for (const lander of game.landers) {
       handleObject(lander);
     }
-    for (const rocket of state.rockets) {
+    for (const rocket of game.rockets) {
       handleObject(rocket);
     }
 
-    for (const [ handle, gfx ] of Array.from(this.handle2gfx.entries())) {
+    for (const [ handle, gfxs ] of Array.from(this.handle2gfx.entries())) {
       if (!seenHandles.has(handle)) {
-        this.viewport.removeChild(gfx);
-        gfx.destroy();
-        this.handle2gfx.delete(handle);
-
-        const shadows = this.handle2Shadows.get(handle);
-        if (shadows) {
-          for (const shadow of shadows) {
-            this.viewport.removeChild(shadow);
-            shadow.destroy();
-          }
-          this.handle2Shadows.delete(handle);
+        for (const gfx of gfxs) {
+          this.viewport.removeChild(gfx);
+          gfx.destroy();
         }
+        this.handle2gfx.delete(handle);
       }
     }
+
+    this.updateLegend();
 
     this.renderer.render(this.scene);
   }
@@ -130,7 +164,6 @@ export class CanvasRenderer {
 
     const minZoom = this.viewport.screenWidth / this.viewport.worldWidth;
     const selfLander = playerId ? game.landers.find(l => l.id === playerId) : undefined;
-    const selfGfx = selfLander ? this.handle2gfx.get(selfLander?.handle) : undefined;
     if (selfLander) {
       this.viewport.scaled = Math.max(1, minZoom);
 
@@ -150,9 +183,11 @@ export class CanvasRenderer {
       this.viewport.left = Math.min(this.viewport.left, selfLander.translation.x - marginX);
       this.viewport.right = Math.max(this.viewport.right, selfLander.translation.x + marginX);
 
-      const marginY = this.viewport.screenHeightInWorldPixels * 0.3;
-      this.viewport.top = Math.min(this.viewport.top, (this.viewport.worldHeight - selfLander.translation.y) - marginY);
-      this.viewport.bottom = Math.max(this.viewport.bottom, (this.viewport.worldHeight - selfLander.translation.y) + marginY, 0);
+      const marginYTop = this.viewport.screenHeightInWorldPixels * 0.3;
+      this.viewport.top = Math.min(this.viewport.top, (this.viewport.worldHeight - selfLander.translation.y) - marginYTop);
+      
+      const marginYBottom = this.viewport.screenHeightInWorldPixels * 0.5;
+      this.viewport.bottom = Math.max(this.viewport.bottom, (this.viewport.worldHeight - selfLander.translation.y) + marginYBottom, 0);
 
     } else {
       this.viewport.scaled = minZoom;
@@ -175,9 +210,23 @@ export class CanvasRenderer {
     }
   }
 
+  private createObjectLabel(object: GameObject) {
+    if (object instanceof Lander) {
+      return this.createLanderLabel(object);
+    } else {
+      return undefined;
+    }
+  }
+
   private updateObjectGraphics(object: GameObject, gfx: Graphics | Container) {
     if (object instanceof Lander) {
       this.updateLanderGraphics(object, gfx);
+    }
+  }
+
+  private updateObjectLabel(object: GameObject, gfx: DisplayObject) {
+    if (object instanceof Lander) {
+      this.updateLanderLabel(object, gfx);
     }
   }
 
@@ -202,6 +251,16 @@ export class CanvasRenderer {
     }
   }
 
+  private updateLanderLabel(lander: Lander, gfx: DisplayObject) {
+    assert(gfx instanceof Container);
+    const landerName = gfx.getChildByName("landerName");
+    if (landerName instanceof Text) {
+      if (landerName.text !== lander.name) {
+        landerName.text = lander.name;
+      }
+    }
+  }
+
   private createLanderGraphics(lander: Lander) {    
     const shape = lander.collider.shape;
     assert(shape instanceof Ball);
@@ -211,9 +270,9 @@ export class CanvasRenderer {
     const LANDER_LENGTH = length;
 
     const shuttle = new Graphics();
-    shuttle.lineStyle(1, lander.color);
+    shuttle.lineStyle(1, getLanderColor(lander.color, 8));
     drawSegments(shuttle, SHUTTLE_COCKPIT, LANDER_LENGTH);
-    shuttle.lineStyle(1, lander.color);
+    shuttle.lineStyle(1, getLanderColor(lander.color, 8));
     drawSegments(shuttle, SHUTTLE_SEGMENTS, LANDER_LENGTH);
 
     const flame = new Graphics();
@@ -223,6 +282,21 @@ export class CanvasRenderer {
     container.addChild(shuttle);
 
     this.viewport.addChild(container);
+    return container;
+  }
+
+  private createLanderLabel(lander: Lander) {
+    const container = new Container();
+    const landerName = new Text(lander.name, {
+      fontSize: "10px",
+      fill: getLanderColor(lander.color, 11),
+      fontFamily: MONO.style.fontFamily
+    });
+    landerName.name = "landerName";
+    landerName.position.y = 0;
+    landerName.position.x = lander.radius + 10;
+    container.addChild(landerName);
+    this.scene.addChild(container);
     return container;
   }
 

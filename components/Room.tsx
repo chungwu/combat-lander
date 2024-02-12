@@ -1,37 +1,22 @@
 import { useLanderSocket } from "@/hooks/game-hooks";
 import { GameCanvas } from "./GameCanvas";
+import sty from "./Room.module.css";
+import { GameOverlay } from "./GameOverlay";
 
 export function Room(props: {
   roomId: string
 }) {
   const { roomId } = props;
   console.log("ROOM", roomId)
-  const { socket, game } = useLanderSocket(roomId);
+  const { game, engine } = useLanderSocket(roomId);
   (globalThis as any).game = game;
 
   return (
-    <div style={{
-      width: "100vw",
-      height: "100vh",
-      position: "relative"
-    }}>
-      {game && (
+    <div className={sty.root}>
+      {game && engine && (
         <>
-          <GameCanvas game={game} playerId={socket.id}/>
-          <div style={{
-            width: "100vw",
-            height: "100vh",
-            position: "absolute",
-            left: 0,
-            top: 0
-          }}>
-            <button 
-              style={{position: "absolute", right: 0, top: 0}}
-              onClick={() => socket.send(JSON.stringify({type: "join", name: `Player ${game.landers.length + 1}`}))}
-            >
-              Join
-            </button>
-          </div>
+          <GameCanvas game={game} playerId={engine.playerId}/>
+          <GameOverlay game={game} engine={engine} />
         </>
       )}
     </div>

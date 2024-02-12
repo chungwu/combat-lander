@@ -1,7 +1,7 @@
 import Rapier, { Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
 import { LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
-import { FULL_THROTTLE_FORCE, LANDER_RADIUS, THROTTLE_RATE, TURN_RATE } from "../constants";
+import { FULL_THROTTLE_FORCE, LANDER_RADIUS, LanderColor, THROTTLE_RATE, TURN_RATE } from "../constants";
 import { normalizeAngle, rotateVector } from "@/utils/math";
 import pick from "lodash/pick";
 import { GameInputEvent } from "@/messages";
@@ -10,7 +10,7 @@ import assert from "assert";
 interface LanderOpts {
   id: string;
   name: string;
-  color: string;
+  color: LanderColor;
 }
 
 const SERIALIZED_FIELDS = [
@@ -24,7 +24,7 @@ SERIALIZED_FIELDS satisfies readonly (keyof Lander)[];
 export class Lander extends GameObject {
   public id: string;
   public name: string;
-  public color: string;
+  public color: LanderColor;
   public throttle: number = 0;
   public targetRotation: number | null = null;
   public health: number = 0;

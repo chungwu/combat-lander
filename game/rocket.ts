@@ -5,6 +5,7 @@ import { Lander } from "./objects/lander";
 import pick from "lodash/pick";
 import { nanoid } from "nanoid";
 import pull from "lodash/pull";
+import { getLanderColor } from "./constants";
 
 export type RocketType = "small" | "big";
 
@@ -26,7 +27,6 @@ export class Rocket extends GameObject {
 
   static create(game: LanderGameState, lander: Lander, opts: {
     rocketType: RocketType;
-    color: string;
   }) {
     const type = opts.rocketType;
     const rocketSize = ROCKET_STATS[type].radius;
@@ -38,7 +38,7 @@ export class Rocket extends GameObject {
     return new Rocket(collider, {
       ownerLanderId:  lander.id,
       rocketType: opts.rocketType,
-      color: opts.color
+      color: getLanderColor(lander.color, 7)
     });
   }
 

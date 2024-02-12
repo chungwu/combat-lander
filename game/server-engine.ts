@@ -27,7 +27,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
         Math.random() * this.game.moon.worldWidth, 
         this.game.moon.worldHeight * 0.5
       ),
-      color: availableColors[random(0, availableColors.length)]
+      color: availableColors[random(0, availableColors.length - 1)]
     });
     this.game.landers.push(lander);
   }

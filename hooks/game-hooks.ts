@@ -31,8 +31,8 @@ export function useLanderSocket(roomId: string) {
   React.useEffect(() => {
     if (game && engine) {
       const keyUpHandler = (event: KeyboardEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
+        // event.preventDefault();
+        // event.stopPropagation();
         if (event.key.startsWith("Arrow")) {
           const key = event.key.replace("Arrow", "").toLowerCase() as any;
           engine.processLocalInput({ type: "keyup", key})
@@ -41,8 +41,8 @@ export function useLanderSocket(roomId: string) {
         }
       };
       const keyDownHandler = (event: KeyboardEvent) => {
-        event.preventDefault();
-        event.stopPropagation();
+        // event.preventDefault();
+        // event.stopPropagation();
         if (event.key.startsWith("Arrow")) {
           const key = event.key.replace("Arrow", "").toLowerCase() as any;
           engine.processLocalInput({ type: "keydown", key})
@@ -64,6 +64,7 @@ export function useLanderSocket(roomId: string) {
 
   return {
     game,
-    socket
+    socket,
+    engine
   };
 }

@@ -4,6 +4,7 @@ import { LanderGameState } from "./game-state";
 import { BaseLanderEngine } from "./engine";
 import assert from "assert";
 import { CLIENT_SNAPSHOT_FREQ, CLIENT_SNAPSHOT_GC_FREQ, PARTIAL_SYNC_FREQ } from "./constants";
+import { computed, makeObservable } from "mobx";
 
 export class ClientLanderEngine extends BaseLanderEngine {
   private lastSyncTimestep: number;
@@ -16,7 +17,9 @@ export class ClientLanderEngine extends BaseLanderEngine {
     this.timestep = initialTimeStep;
     this.initialTimeStep = initialTimeStep;
     this.lastSyncTimestep = initialTimeStep;
-    console.log("STARTING TIMESTAMP", this.timestep);
+    makeObservable(this, {
+      selfLander: computed
+    });
   }
 
   private sendMessage(msg: ClientMessage) {
@@ -34,7 +37,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   processLocalInput(event: GameInputEvent) {
-    if (this.isPlaying()) {
+    if (this.isPlaying) {
       const msg = {
         type: "input",
         time: this.timestep,
@@ -112,7 +115,21 @@ export class ClientLanderEngine extends BaseLanderEngine {
     return this.socket.id;
   }
 
-  private isPlaying() {
-    return !!this.game.landers.find(l => l.id === this.socket.id);
+  get isPlaying() {
+    return !!this.selfLander;
+  }
+
+  get selfLander() {
+    return this.game.landers.find(l => l.id === this.socket.id);
+  }
+
+  joinGame(opts: {
+    name: string
+  }) {
+    this.sendMessage({
+      type: "join",
+      time: this.timestep,
+      name: opts.name
+    });
   }
 }

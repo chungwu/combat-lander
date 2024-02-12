@@ -1,3 +1,5 @@
+import { amberDark, blueDark, bronzeDark, crimsonDark, cyanDark, grassDark, greenDark, indigoDark, irisDark, jadeDark, limeDark, mintDark, orangeDark, pinkDark, plumDark, purpleDark, rubyDark, skyDark, tealDark, violetDark, yellowDark } from "@radix-ui/colors"
+
 export const WORLD_WIDTH = 1000;
 export const WORLD_HEIGHT = 1000;
 export const GRAVITY = -40;
@@ -5,33 +7,42 @@ export const GRAVITY = -40;
 
 // Lander mechanics
 export const LANDER_RADIUS = 10;
-export const TURN_RATE = 0.8; // rad/s
+export const TURN_RATE = 1; // rad/s
 export const THROTTLE_RATE = 1; // rad/s
 export const FULL_THROTTLE_FORCE = 40000;
-export const LANDER_COLORS = [
-  // from https://www.radix-ui.com/colors level 9
-  "#EC5A72", // ruby
-  "#EE518A", // crimson
-  "#DE51A8", // pink
-  "#B658C4", // plum
-  "#9A5CD0", // purple
-  "#7D66D9", // violet
-  "#6E6ADE", // iris
-  "#5472E4", // indigo
-  "#3B9EFF", // blue
-  "#23AFD0", // cyan
-  "#0EB39E", // teal
-  "#27B08B", // jade
-  "#33B074", // green
-  "#53B365", // grass
-  "#AE8C7E", // bronze
-  "#FF801F", // orange
-  "#FFD60A", // amber
-  "#FFFF57", // yellow
-  "#D4FF70", // lime
-  "#A8F5E5", // mint
-  "#A8EEFF", // sky
-]
+
+export const LANDER_COLORS_MAP = {
+  "ruby": rubyDark,
+  "crimson": crimsonDark,
+  "pink": pinkDark,
+  "plum": plumDark,
+  "purple": purpleDark,
+  "violet": violetDark,
+  "iris": irisDark,
+  "indigo": indigoDark,
+  "blue": blueDark,
+  "cyan": cyanDark,
+  "teal": tealDark,
+  "jade": jadeDark,
+  "green": greenDark,
+  "grass": grassDark,
+  "bronze": bronzeDark,
+  "orange": orangeDark,
+  "amber": amberDark,
+  "yellow": yellowDark,
+  "lime": limeDark,
+  "mint": mintDark,
+  "sky": skyDark,
+} as const;
+
+export const LANDER_COLORS = Object.keys(LANDER_COLORS_MAP) as (keyof typeof LANDER_COLORS_MAP)[];
+
+export type LanderColor = keyof typeof LANDER_COLORS_MAP;
+
+export function getLanderColor(color: LanderColor, level: 1|2|3|4|5|6|7|8|9|10|11|12) {
+  const colors = LANDER_COLORS_MAP[color] as any;
+  return colors[`${color}${level}`] as string;
+}
 
 // Rocket mechanics
 export const ROCKET_IMPULSE = 15000;

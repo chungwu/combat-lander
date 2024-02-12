@@ -10,6 +10,7 @@ import { addVector, rotateVector, scaleVector } from "@/utils/math";
 import { Sky } from "./objects/sky";
 import pull from "lodash/pull";
 import { ROCKET_IMPULSE } from "./constants";
+import { makeAutoObservable, makeObservable, observable } from "mobx";
 
 export class LanderGameState {
   public landers: Lander[];
@@ -41,6 +42,10 @@ export class LanderGameState {
     this.sky = Sky.create(this);
     this.landers = [];
     this.rockets = [];
+    makeObservable(this, {
+      landers: observable,
+      rockets: observable
+    })
   }
 
   step() {
@@ -84,7 +89,7 @@ export class LanderGameState {
       if (event.type === "fire-rocket") {
         assert(isServer(), "Can only handle fire-rocket on the server");
         const rocket = Rocket.create(
-          this, lander, { rocketType: event.rocketType, color: lander.color }
+          this, lander, { rocketType: event.rocketType, }
         );
         this.rockets.push(rocket);
         this.fireRocket(lander, rocket);

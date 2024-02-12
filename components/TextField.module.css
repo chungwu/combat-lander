@@ -1,0 +1,13 @@
+.root {
+  display: flex;
+  flex-direction: column;
+}
+.root :global(.react-aria-Input) {
+  background: transparent;
+  border: 1px solid var(--control-border);
+  padding: 4px 8px;
+
+}
+.root :global(.react-aria-Input):hover {
+  border-color: var(--control-border-hover);
+}
