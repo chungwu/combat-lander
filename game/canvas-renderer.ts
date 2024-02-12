@@ -10,6 +10,7 @@ import { WORLD_WIDTH, getLanderColor } from "./constants";
 import { Rocket } from "./rocket";
 import { Sky } from "./objects/sky";
 import { MONO } from "@/fonts";
+import { Moon } from "./map";
 
 type RenderedObjects = [Container, Container, Container];
 
@@ -17,8 +18,10 @@ export class CanvasRenderer {
   handle2gfx: Map<number, RenderedObjects>;
   handle2label: Map<number, DisplayObject | null>;
   renderer: Renderer;
-  scene: Container;
+  root: Container;
   viewport: Viewport;
+  screenRoot: Container;
+  curGameId: string | undefined;
   constructor() {
     this.handle2gfx = new Map();
     this.handle2label = new Map();
@@ -30,7 +33,7 @@ export class CanvasRenderer {
       resolution: window.devicePixelRatio,
       autoDensity: true
     });
-    this.scene = new Container();
+    this.root = new Container();
     this.viewport = new Viewport({
       screenWidth: window.innerWidth,
       screenHeight: window.innerHeight,
@@ -39,37 +42,49 @@ export class CanvasRenderer {
     });
     (globalThis as any).VIEWPORT = this.viewport;
     this.viewport.moveCorner(0, 0)
+    this.root.addChild(this.viewport);
 
-    this.scene.addChild(this.viewport);
+    this.screenRoot = new Container();
+    this.root.addChild(this.screenRoot);
 
     const legend = new Container();
     legend.name = "legend";
-    this.scene.addChild(legend);
+    this.screenRoot.addChild(legend);
 
-    (globalThis as any).__PIXI_STAGE__ = this.scene;
+    (globalThis as any).__PIXI_STAGE__ = this.root;
     (globalThis as any).__PIXI_RENDERER__ = this.renderer;
-    (globalThis as any).RERENDER = () => this.renderer.render(this.scene);
+    (globalThis as any).RERENDER = () => this.renderer.render(this.root);
   }
 
   get canvasElement() {
     return this.renderer.view as HTMLCanvasElement;
   }
 
+  private reset() {
+    this.screenRoot.removeChildren();
+    this.viewport.removeChildren();
+    this.handle2gfx.clear();
+    this.handle2label.clear();
+  }
+
   private updateLegend() {
-    const legend = this.scene.getChildByName("legend");
-    if (legend) {
-      assert(legend instanceof Container);
-      legend.removeChildren();
-      for (let i=0; i<1000; i+= 100) {
-        const text = new Text(`${i}`, {
-          fill: "#FFFFFF",
-          fontSize: 12,
-          fontFamily: MONO.style.fontFamily
-        });
-        text.x = 10; 
-        text.y = this.viewport.toScreen(0, i).y;
-        legend.addChild(text);
-      }
+    let legend = this.screenRoot.getChildByName("legend");
+    if (!legend) {
+      legend = new Container();
+      legend.name = "legend";
+      this.screenRoot.addChild(legend);
+    }
+    assert(legend instanceof Container);
+    legend.removeChildren();
+    for (let i=0; i<1000; i+= 100) {
+      const text = new Text(`${i}`, {
+        fill: "#FFFFFF",
+        fontSize: 12,
+        fontFamily: MONO.style.fontFamily
+      });
+      text.x = 10; 
+      text.y = this.viewport.toScreen(0, i).y;
+      legend.addChild(text);
     }
   }
 
@@ -80,6 +95,13 @@ export class CanvasRenderer {
   }
 
   render(game: LanderGameState, playerId: string | undefined) {
+    if (!this.curGameId || this.curGameId !== game.id) {
+      // Game changed!  Clear everything
+      this.reset();
+      this.curGameId = game.id;
+      this.viewport.worldWidth = game.moon.worldWidth;
+    }
+
     this.updateViewport(game, playerId);
     const seenHandles = new Set<number>();
 
@@ -146,17 +168,24 @@ export class CanvasRenderer {
 
     for (const [ handle, gfxs ] of Array.from(this.handle2gfx.entries())) {
       if (!seenHandles.has(handle)) {
-        for (const gfx of gfxs) {
-          this.viewport.removeChild(gfx);
-          gfx.destroy();
-        }
-        this.handle2gfx.delete(handle);
+        this.destroyHandle(handle);
       }
     }
 
     this.updateLegend();
 
-    this.renderer.render(this.scene);
+    this.renderer.render(this.root);
+  }
+  
+  private destroyHandle(handle: number) {
+    const gfxs = this.handle2gfx.get(handle);
+    if (gfxs) {
+      for (const gfx of gfxs) {
+        gfx.destroy();
+        this.viewport.removeChild(gfx);
+      }
+    }
+    this.handle2gfx.delete(handle);
   }
 
   private updateViewport(game: LanderGameState, playerId: string | undefined) {
@@ -270,9 +299,9 @@ export class CanvasRenderer {
     const LANDER_LENGTH = length;
 
     const shuttle = new Graphics();
-    shuttle.lineStyle(1, getLanderColor(lander.color, 8));
+    shuttle.lineStyle(1, getLanderColor(lander.color, 9));
     drawSegments(shuttle, SHUTTLE_COCKPIT, LANDER_LENGTH);
-    shuttle.lineStyle(1, getLanderColor(lander.color, 8));
+    shuttle.lineStyle(1, getLanderColor(lander.color, 9));
     drawSegments(shuttle, SHUTTLE_SEGMENTS, LANDER_LENGTH);
 
     const flame = new Graphics();
@@ -296,7 +325,7 @@ export class CanvasRenderer {
     landerName.position.y = 0;
     landerName.position.x = lander.radius + 10;
     container.addChild(landerName);
-    this.scene.addChild(container);
+    this.screenRoot.addChild(container);
     return container;
   }
 

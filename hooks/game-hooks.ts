@@ -21,6 +21,7 @@ export function useLanderSocket(roomId: string) {
         const engine = new ClientLanderEngine(game, socket, data.time);
         setGame(game);
         setEngine(engine);
+        (globalThis as any).ENGINE = engine;
       } else {
         assert(engine);
         engine.handleMessage(data);

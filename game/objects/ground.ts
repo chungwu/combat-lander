@@ -24,7 +24,6 @@ export class Ground extends GameObject {
   }
 
   mergeFrom(world: World, opts: ReturnType<typeof this.serialize>) {
-    const collider = world.getCollider(opts.handle);
-    this.collider = collider;
+    this.updateCollider(world, opts.handle);
   }
 }

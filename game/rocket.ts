@@ -96,7 +96,7 @@ export class Rocket extends GameObject {
 
   mergeFrom(world: World, data: ReturnType<typeof this.serialize>) {
     Object.assign(this, pick(data, ...SERIALIZED_FIELDS));
-    this.updateCollider(world);
+    this.updateCollider(world, data.handle);
   }
 }
 
@@ -104,11 +104,11 @@ const ROCKET_STATS = {
   "small": {
     radius: 10,
     initialVelocity: 40,
-    aliveSteps: 60 * 30 // alive for 30s
+    aliveSteps: 60 * 30, // alive for 30s,
   },
   "big": {
     radius: 25,
     initialVelocity: 40,
-    aliveSteps: 60 * 30
+    aliveSteps: 60 * 30,
   } as const
 };

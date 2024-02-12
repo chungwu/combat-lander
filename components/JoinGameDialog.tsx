@@ -40,13 +40,12 @@ export function JoinGameDialog(props: {
             >
               <Heading>Join this game</Heading>
               <TextField 
+                label="Your name"
                 name="name" 
                 defaultValue={defaultName}
                 autoFocus
-              >
-                <Label>Name</Label>
-                <Input ref={nameRef} />
-              </TextField>
+                autoSelectAll
+              />
               <div style={{display: "flex", gap: 24}}>
                 <Button type="submit" styleType="primary">Join!</Button>
                 <Button styleType="clear" onPress={close}>Cancel</Button>

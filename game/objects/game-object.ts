@@ -34,10 +34,10 @@ export abstract class GameObject {
     return this.translation.y;
   }
 
-  updateCollider(world: World) {
-    const collider = world.getCollider(this.handle);
+  updateCollider(world: World, handle: number) {
+    const collider = world.getCollider(handle);
     if (!collider) {
-      throw new Error(`NO COLLIDER FOUND!!! ${this.handle}`);
+      throw new Error(`NO COLLIDER FOUND!!! ${handle}`);
     }
     this.collider = collider;
   }

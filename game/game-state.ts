@@ -1,31 +1,33 @@
+import { GameInputEvent } from "@/messages";
+import { addVector, rotateVector, scaleVector } from "@/utils/math";
+import { isServer } from "@/utils/utils";
 import { EventQueue, Vector2, World } from "@dimforge/rapier2d";
+import assert from "assert";
+import pull from "lodash/pull";
+import { makeObservable, observable } from "mobx";
+import { ROCKET_IMPULSE } from "./constants";
+import { Moon, generateRandomMap } from "./map";
 import { Ground } from "./objects/ground";
 import { Lander } from "./objects/lander";
-import { Moon, generateRandomMap } from "./map";
-import { GameInputEvent } from "@/messages";
-import { Rocket } from "./rocket";
-import assert from "assert";
-import { isServer } from "@/utils/utils";
-import { addVector, rotateVector, scaleVector } from "@/utils/math";
 import { Sky } from "./objects/sky";
-import pull from "lodash/pull";
-import { ROCKET_IMPULSE } from "./constants";
-import { makeAutoObservable, makeObservable, observable } from "mobx";
+import { Rocket } from "./rocket";
+import { nanoid } from "nanoid";
 
 export class LanderGameState {
   public landers: Lander[];
   public rockets: Rocket[];
   public ground: Ground;
   public sky: Sky;
+  public resetTimestamp: number | undefined;
 
   static createNew() {
     const moon = generateRandomMap();
     const world = new World(new Vector2(0, moon.gravity));
-    return new LanderGameState(moon, world);
+    return new LanderGameState(nanoid(), moon, world);
   }
 
   static createFromFull(opts: ReturnType<typeof LanderGameState.prototype.serializeFull>) {
-    const state = new LanderGameState(opts.moon, opts.world);
+    const state = new LanderGameState(opts.id, opts.moon, opts.world);
     for (const lander of opts.landers) {
       state.landers.push(Lander.createFrom(opts.world, lander));
     }
@@ -35,6 +37,7 @@ export class LanderGameState {
   }
 
   private constructor(
+    public id: string,
     public moon: Moon,
     public world: World,
   ) {
@@ -42,10 +45,12 @@ export class LanderGameState {
     this.sky = Sky.create(this);
     this.landers = [];
     this.rockets = [];
+    this.resetTimestamp = undefined;
     makeObservable(this, {
       landers: observable,
-      rockets: observable
-    })
+      rockets: observable,
+      resetTimestamp: observable,
+    });
   }
 
   step() {
@@ -127,39 +132,57 @@ export class LanderGameState {
 
   serializeFull() {
     return {
+      id: this.id,
       moon: this.moon,
       world: this.world,
       ground: this.ground.serialize(),
       sky: this.sky.serialize(),
       landers: this.landers.map(l => l.serialize()),
       rockets: this.rockets.map(r => r.serialize()),
+      resetTimestamp: this.resetTimestamp,
     };
   }
 
   serializePartial() {
     return {
+      id: this.id,
       world: this.world,
       landers: this.landers.map(l => l.serialize()),
       rockets: this.rockets.map(r => r.serialize()),
     };
   }
 
+  serializeMeta() {
+    return {
+      id: this.id,
+      resetTimestamp: this.resetTimestamp
+    };
+  }
+
   mergeFull(payload: ReturnType<typeof this.serializeFull>) {
     const prevWorld = this.world;
+    this.id = payload.id;
     this.moon = payload.moon;
     this.world = payload.world;
     this.ground.mergeFrom(this.world, payload.ground);
     this.sky.mergeFrom(this.world, payload.sky);
     this.mergeLanders(payload.landers);
     this.mergeRockets(payload.rockets);
+    this.resetTimestamp = payload.resetTimestamp;
   }
 
   mergePartial(payload: ReturnType<typeof this.serializePartial>) {
+    this.id = payload.id;
     this.world = payload.world;
-    this.ground.updateCollider(this.world);
-    this.sky.updateCollider(this.world);
+    this.ground.updateCollider(this.world, this.ground.handle);
+    this.sky.updateCollider(this.world, this.sky.handle);
     this.mergeLanders(payload.landers);
     this.mergeRockets(payload.rockets);
+  }
+
+  mergeMeta(payload: ReturnType<typeof this.serializeMeta>) {
+    this.id = payload.id;
+    this.resetTimestamp = payload.resetTimestamp;
   }
 
   mergeLanders(fromLanders: ReturnType<typeof this.serializeFull>["landers"]) {

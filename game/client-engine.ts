@@ -42,6 +42,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
         type: "input",
         time: this.timestep,
         playerId: this.playerId,
+        gameId: this.game.id,
         event
       } as const;
       this.savePlayerEvent(msg);
@@ -50,6 +51,9 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   handleMessage(msg: ServerMessage) {
+    if (msg.gameId !== this.game.id && msg.type !== "reset") {
+      return;
+    }
     console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg, this.game.world);
     if (msg.type === "full" || msg.type === "partial") {
       // msg.time should always be > this.lastSyncTimestep as we don't expect
@@ -95,6 +99,12 @@ export class ClientLanderEngine extends BaseLanderEngine {
       }
     } else if (msg.type === "init") {
       // handled before engine creation
+    } else if (msg.type === "reset") {
+      this.reset();
+      this.game.mergeFull(msg.paylod);
+      this.initialTimeStep = this.timestep = this.lastSyncTimestep = msg.time;
+    } else if (msg.type === "meta") {
+      this.game.mergeMeta(msg.payload);
     }
   }
 
@@ -128,8 +138,25 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }) {
     this.sendMessage({
       type: "join",
+      gameId: this.game.id,
       time: this.timestep,
       name: opts.name
+    });
+  }
+
+  resetGame() {
+    this.sendMessage({
+      type: "request-reset",
+      gameId: this.game.id,
+      time: this.timestep,
+    });
+  }
+
+  cancelResetGame() {
+    this.sendMessage({
+      type: "cancel-reset",
+      gameId: this.game.id,
+      time: this.timestep,
     });
   }
 }

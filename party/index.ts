@@ -8,21 +8,13 @@ import { ClientMessage } from "@/messages";
 import { ServerLanderEngine } from "@/game/server-engine";
 
 export default class Server implements Party.Server {
-  private _game: LanderGameState | undefined;
   private _engine: ServerLanderEngine | undefined;
-  private intervalId: any | undefined;
-  private viewers: string[] = [];
   constructor(readonly room: Party.Room) {
   }
 
   async onStart() {
     await loadRapierWasm();
-    this._game = LanderGameState.createNew();
-    this._engine = new ServerLanderEngine(this.game, this.room);
-  }
-
-  get game() {
-    return ensure(this._game);
+    this._engine = new ServerLanderEngine(this.room);
   }
 
   get engine() {
@@ -37,14 +29,7 @@ export default class Server implements Party.Server {
   room: ${this.room.id}
   url: ${new URL(ctx.request.url).pathname}`
     );
-    this.viewers.push(conn.id);
-    // let's send a message to the connection
-    conn.send(PACKR.pack({
-      type: "init",
-      payload: this.game.serializeFull(),
-      time: this.engine.timestep
-    }));
-    this.maybeStart();
+    this.engine.onConnect(conn);
   }
 
   onMessage(message: string | Uint8Array | Buffer, sender: Party.Connection) {
@@ -54,8 +39,7 @@ export default class Server implements Party.Server {
 
   onClose(conn: Party.Connection) {
     console.log("CLOSED", conn.id);
-    remove(this.viewers, x => x === conn.id);
-    this.maybeStop();
+    this.engine.onDisconnect(conn);
   }
 
   private unpackMessage(message: string | Uint8Array | Buffer): ClientMessage {
@@ -64,25 +48,6 @@ export default class Server implements Party.Server {
     } else {
       return PACKR.unpack(message);
     }
-  }
-
-  private maybeStart() {
-    if (this.intervalId == null && this.viewers.length > 0) {
-      this.intervalId = setInterval(() => {
-        this.step();
-      }, 1000 / 60);
-    }
-  }
-
-  private maybeStop() {
-    if (this.intervalId != null && this.viewers.length === 0) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-    }
-  }
-
-  private step() {
-    this.engine.timerStep();
   }
 }
 

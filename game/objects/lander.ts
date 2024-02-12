@@ -73,7 +73,7 @@ export class Lander extends GameObject {
 
   mergeFrom(world: World, data: ReturnType<typeof this.serialize>) {
     Object.assign(this, pick(data, ...SERIALIZED_FIELDS));
-    this.updateCollider(world);
+    this.updateCollider(world, data.handle);
   }
 
   processInput(event: GameInputEvent) {

@@ -15,6 +15,14 @@ export class BaseLanderEngine {
     protected snapshotFreq: number,
   ) {}
 
+  protected reset() {
+    this.timestep = 0;
+    this.initialTimeStep = 0;
+    this.firstStepTime = 0;
+    this.snapshots.splice(0, this.snapshots.length);
+    this.playerInputs.splice(0, this.playerInputs.length);
+  }
+
   timerStep() {
     const now = performance.now();
     if (this.firstStepTime === 0) {
