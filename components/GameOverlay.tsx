@@ -1,13 +1,15 @@
 import { ClientLanderEngine } from "@/game/client-engine";
 import { LanderGameState } from "@/game/game-state";
-import sty from "./GameOverlay.module.css";
-import { Button } from "./Button";
-import { DialogTrigger, Heading, Input } from "react-aria-components";
-import { JoinGameDialog } from "./JoinGameDialog";
+import sortBy from "lodash/sortBy";
+import { reaction } from "mobx";
 import { observer } from "mobx-react-lite";
 import React from "react";
+import { DialogTrigger, Heading } from "react-aria-components";
+import { Button } from "./Button";
+import sty from "./GameOverlay.module.css";
+import { JoinGameDialog } from "./JoinGameDialog";
 import { Modal } from "./Modal";
-import sortBy from "lodash/sortBy";
+import classNames from "classnames";
 
 export const GameOverlay = observer(function GameOverlay(props: {
   game: LanderGameState;
@@ -20,6 +22,7 @@ export const GameOverlay = observer(function GameOverlay(props: {
       <TopRight game={game} engine={engine} />
       <MajorGameMessage game={game} engine={engine} />
       <LeaderBoard game={game} engine={engine} />
+      <DamageFlasher game={game} engine={engine} />
     </div>
   )
 });
@@ -136,5 +139,48 @@ const LeaderBoard = observer(function LeaderBoard(props: {
         ))}
       </ol>
     </div>
+  );
+});
+
+const DamageFlasher = observer(function DamageFlasher(props: {
+  game: LanderGameState;
+  engine: ClientLanderEngine;
+}) {
+  const { game, engine } = props;
+  const ref = React.useRef<HTMLDivElement>(null);
+  const lander = engine.selfLander;
+  React.useEffect(() => {
+    const dispose = reaction(
+      () => {
+        return lander?.health
+      },
+      (health, prevHealth) => {
+        if (health != null && prevHealth != null && health < prevHealth) {
+          // Took damage!
+          if (ref.current) {
+            ref.current.animate([
+              {opacity: 0},
+              {opacity: 0.5},
+              {opacity: 0}
+            ], {
+              duration: 150, iterations: 1
+            })
+          }
+        }
+      }
+    );
+    return () => {
+      dispose();
+    };
+  }, [lander, ref]);
+
+  return (
+    <div 
+      className={classNames(
+        sty.damageFlasher, {
+          [sty.damageFlasherDead]: lander && !lander.isAlive()
+        })} 
+      ref={ref} 
+    />
   );
 });

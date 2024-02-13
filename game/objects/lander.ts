@@ -1,11 +1,12 @@
 import Rapier, { ActiveCollisionTypes, ActiveEvents, Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
 import { LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
-import { FULL_THROTTLE_FORCE, LANDER_RADIUS, LanderColor, THROTTLE_RATE, TURN_RATE } from "../constants";
+import { FULL_THROTTLE_FORCE, LANDER_RADIUS, LanderColor, ROTATE_FUEL_BURN_RATE, THROTTLE_FUEL_BURN_RATE, THROTTLE_RATE, TURN_RATE } from "../constants";
 import { normalizeAngle, rotateVector } from "@/utils/math";
 import pick from "lodash/pick";
 import { GameInputEvent } from "@/messages";
 import assert from "assert";
+import { makeObservable, observable } from "mobx";
 
 interface LanderOpts {
   id: string;
@@ -17,7 +18,8 @@ const SERIALIZED_FIELDS = [
   "id", 
   "name", 
   "color",
-  "throttle", "targetRotation", "health", "rotatingLeft", "rotatingRight", "thrustingUp", "thrustingDown"
+  "throttle", "targetRotation", "health", "fuel", 
+  "rotatingLeft", "rotatingRight", "thrustingUp", "thrustingDown"
 ] as const;
 SERIALIZED_FIELDS satisfies readonly (keyof Lander)[];
 
@@ -28,6 +30,7 @@ export class Lander extends GameObject {
   public throttle: number = 0;
   public targetRotation: number | null = null;
   public health: number = 100;
+  public fuel: number = 100;
   public rotatingLeft = false;
   public rotatingRight = false;
   public thrustingUp = false;
@@ -58,6 +61,9 @@ export class Lander extends GameObject {
     this.id = opts.id;
     this.name = opts.name;
     this.color = opts.color;
+    makeObservable(this, {
+      health: observable,
+    });
   }
 
   get radius() {
@@ -115,44 +121,48 @@ export class Lander extends GameObject {
   preStep(dt: number) {
     super.preStep(dt);
 
-    // Set target rotation
-    const rotation = this.rotation;
-    if (this.rotatingLeft || this.rotatingRight) {
-      let target = this.rotation + TURN_RATE * dt * (this.rotatingLeft ? 1 : -1);
-      if (rotation < 0 && target > 0 || rotation > 0 && target < 0) {
-        target = 0;
-      }
-      this.targetRotation = normalizeAngle(target);
-    } else {
-      this.targetRotation = null;
-    }
-
-    if (this.thrustingUp || this.thrustingDown) {
-      let target = this.throttle + THROTTLE_RATE * dt * (this.thrustingUp ? 1 : -1);
-      target = Math.max(0, Math.min(1.0, target));
-      console.log(`SET THROTTLE ${this.throttle} to ${target}, up ${this.thrustingUp} down ${this.thrustingDown}`)
-      this.throttle = target;
-    }
-
     this.body.resetForces(false);
-    if (this.throttle !== 0) {
-      const force = new Vector2(0, FULL_THROTTLE_FORCE);
-      const rotatedForce = rotateVector(force, rotation);
-      this.body.addForce(rotatedForce, true);
-    }
-    
-    if (this.targetRotation != null && this.targetRotation !== rotation) {
-      // Stop any previous rotation from forces
-      this.body.setAngvel(0, true);
-
-      const targetRotation = this.targetRotation;
-      let delta = Math.abs(targetRotation - rotation); 
-      delta = Math.min(delta, TURN_RATE * dt);
-      const sign = ((rotation > targetRotation && rotation - targetRotation < Math.PI) || (rotation < targetRotation && targetRotation
-				- rotation > Math.PI)) ? -1.0 : 1.0;
-      const newRotation = normalizeAngle(rotation + sign * delta);
-      console.log(`SET ROTATION ${this.rotation} to ${newRotation}, left ${this.rotatingLeft}, right ${this.rotatingRight}`)
-      this.body.setRotation(newRotation, true);
+    if (this.fuel === 0) {
+      this.throttle = 0;
+    } else {
+      // Set target rotation
+      const rotation = this.rotation;
+      if (this.rotatingLeft || this.rotatingRight) {
+        let target = this.rotation + TURN_RATE * dt * (this.rotatingLeft ? 1 : -1);
+        if (rotation < 0 && target > 0 || rotation > 0 && target < 0) {
+          target = 0;
+        }
+        this.targetRotation = normalizeAngle(target);
+      } else {
+        this.targetRotation = null;
+      }
+  
+      if (this.thrustingUp || this.thrustingDown) {
+        let target = this.throttle + THROTTLE_RATE * dt * (this.thrustingUp ? 1 : -1);
+        target = Math.max(0, Math.min(1.0, target));
+        this.throttle = target;
+      }
+  
+      if (this.throttle !== 0) {
+        const force = new Vector2(0, FULL_THROTTLE_FORCE);
+        const rotatedForce = rotateVector(force, rotation);
+        this.body.addForce(rotatedForce, true);
+        this.fuel = Math.max(0, this.fuel - THROTTLE_FUEL_BURN_RATE * this.throttle * dt);
+      }
+      
+      if (this.targetRotation != null && this.targetRotation !== rotation) {
+        // Stop any previous rotation from forces
+        this.body.setAngvel(0, true);
+  
+        const targetRotation = this.targetRotation;
+        let delta = Math.abs(targetRotation - rotation); 
+        delta = Math.min(delta, TURN_RATE * dt);
+        const sign = ((rotation > targetRotation && rotation - targetRotation < Math.PI) || (rotation < targetRotation && targetRotation
+          - rotation > Math.PI)) ? -1.0 : 1.0;
+        const newRotation = normalizeAngle(rotation + sign * delta);
+        this.body.setRotation(newRotation, true);
+        this.fuel = Math.max(0, this.fuel - ROTATE_FUEL_BURN_RATE * dt);
+      }
     }
   }
 }

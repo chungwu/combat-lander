@@ -29,8 +29,8 @@ export function generateRandomMap(opts?: {
     vertices: verticesWithPads,
     landingPads
   } = addLandingPads(vertices, {
-    worldWidth, numShortLandingPads: opts?.numShortLandingPads ?? 1,
-    numLongLandingPads: opts?.numLongLandingPads ?? 1
+    worldWidth, numShortLandingPads: opts?.numShortLandingPads ?? 4,
+    numLongLandingPads: opts?.numLongLandingPads ?? 4
   });
 
   return new Moon(worldWidth, worldHeight, verticesWithPads, GRAVITY, landingPads);
@@ -48,7 +48,8 @@ function addLandingPads(vertices: [number, number][], opts: {
     const padWidth = LANDING_PAD_STATS[type].width;
     const pickStart = () => {
       while (true) {
-        const start = Math.floor(Math.random() * opts.worldWidth);
+        const startVertex = Math.floor(Math.random() * newVertices.length);
+        const start = newVertices[startVertex][0];
         const end = start + padWidth;
         if (
           start > 0 &&
@@ -68,7 +69,7 @@ function addLandingPads(vertices: [number, number][], opts: {
 
     const start = pickStart();
     const end = start + padWidth;
-    const index = newVertices.findIndex(v => v[0] > start);
+    const index = newVertices.findIndex(v => v[0] >= start);
     const height = newVertices[index][1];
     const toRemove = newVertices.filter((v, i) => v[0] >= start && v[0] <= end);
     pull(newVertices, ...toRemove);

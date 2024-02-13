@@ -1,11 +1,9 @@
-import { LanderGameState } from "@/game/game-state";
 import { PACKR } from "@/game/packr";
+import { ServerLanderEngine } from "@/game/server-engine";
+import { ClientMessage } from "@/messages";
 import { ensure } from "@/utils/utils";
-import { remove } from "lodash";
 import type * as Party from "partykit/server";
 import { loadRapierWasm } from "./rapier-wasm";
-import { ClientMessage } from "@/messages";
-import { ServerLanderEngine } from "@/game/server-engine";
 
 export default class Server implements Party.Server {
   private _engine: ServerLanderEngine | undefined;

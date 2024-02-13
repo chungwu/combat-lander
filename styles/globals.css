@@ -5,6 +5,7 @@
 @import "@radix-ui/colors/green-dark.css";
 @import "@radix-ui/colors/purple-dark.css";
 @import "@radix-ui/colors/blue-dark.css";
+@import "@radix-ui/colors/tomato-dark.css";
 
 .app {
   --text-color: var(--gray-12);

@@ -1,20 +1,19 @@
-import { Renderer, Container, Graphics, Text, settings, DisplayObject } from "pixi.js";
-import { Viewport } from "pixi-viewport";
-import { LanderGameState } from "./game-state";
-import { Lander } from "./objects/lander";
-import { Ball, Cuboid, Polyline, ShapeType } from "@dimforge/rapier2d";
-import assert from "assert";
-import { Ground } from "./objects/ground";
-import { GameObject } from "./objects/game-object";
-import { LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, WORLD_WIDTH, getLanderColor } from "./constants";
-import { Rocket } from "./rocket";
-import { Sky } from "./objects/sky";
 import { MONO } from "@/fonts";
-import { Moon } from "./map";
-import { grayDark, greenDark, tomatoDark, yellowDark } from "@radix-ui/colors";
-import { LandingPad } from "./objects/landing-pad";
 import { radianToDegrees, vectorDistance } from "@/utils/math";
-import { ensure, ensureInstance } from "@/utils/utils";
+import { ensureInstance } from "@/utils/utils";
+import { Cuboid, Polyline } from "@dimforge/rapier2d";
+import { grayDark, greenDark, tomatoDark, yellowDark } from "@radix-ui/colors";
+import assert from "assert";
+import { Viewport } from "pixi-viewport";
+import { Container, DisplayObject, Graphics, Renderer, Text } from "pixi.js";
+import { LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, WORLD_WIDTH, getLanderColor } from "./constants";
+import { LanderGameState } from "./game-state";
+import { GameObject } from "./objects/game-object";
+import { Ground } from "./objects/ground";
+import { Lander } from "./objects/lander";
+import { LandingPad } from "./objects/landing-pad";
+import { Sky } from "./objects/sky";
+import { Rocket } from "./rocket";
 
 type RenderedObjects = [Container, Container, Container];
 
@@ -289,25 +288,31 @@ export class CanvasRenderer {
     }
   }
 
-  private updateLanderGraphics(lander: Lander, container: Container) {
-    const flame = container.getChildByName("flame");  
-    const shape = lander.collider.shape;
-    assert(shape instanceof Ball);
-    const LANDER_LENGTH = shape.radius * 2;
-    assert(shape instanceof Ball);
-    if (flame instanceof Graphics) {
-      flame.clear();
+  private updateLanderGraphics(
+    lander: Lander, container: Container
+  ) {
+    const flame = ensureInstance(container.getChildByName("flame"), Graphics);
+    const LANDER_LENGTH = lander.radius * 2;
+    flame.clear();
 
-      const flameLines: [number, number][][] = [
-        [
-          [-.25, .45],
-          [0, (.45 + lander.throttle)],
-          [.25, .45],
-        ]
-      ];
-      flame.lineStyle(1, "#FFFFFF")
-      drawSegments(flame, flameLines, LANDER_LENGTH);
-    }
+    const flameLines: [number, number][][] = [
+      [
+        [-.25, .45],
+        [0, (.45 + lander.throttle)],
+        [.25, .45],
+      ]
+    ];
+    flame.lineStyle(1, "#FFFFFF")
+    drawSegments(flame, flameLines, LANDER_LENGTH);
+
+    const healthGauge = ensureInstance(container.getChildByName("healthGauge"), Graphics);
+    healthGauge.clear();
+    drawLanderHealthGauge(lander, healthGauge);
+
+    const fuelGauge = ensureInstance(container.getChildByName("fuelGauge"), Container);
+    const fuelMeter = ensureInstance(fuelGauge.getChildByName("fuelMeter"), Graphics);
+    fuelMeter.clear();
+    drawLanderFuelMeter(lander, fuelMeter);
 
     if (!lander.isAlive()) {
       container.alpha = 0.5;
@@ -335,7 +340,6 @@ export class CanvasRenderer {
     const distance = vectorDistance(pad, lander);
     if (distance < LANDING_INDICATOR_THRESHOLD && lander.id === playerId) {
       landingIndicator.visible = true;
-      landerHealth.visible = false;
 
       const angle = Math.abs(radianToDegrees(lander.rotation));
       const vx = Math.abs(lander.body.linvel().x);
@@ -362,22 +366,21 @@ export class CanvasRenderer {
 
     if (!lander.isAlive()) {
       gfx.alpha = 0.5;
-      landerHealth.visible = false;
     }
+
+    // We show lander health gauge now instead of text
+    landerHealth.visible = false;
   }
 
   private createLanderGraphics(lander: Lander) {    
-    const shape = lander.collider.shape;
-    assert(shape instanceof Ball);
     const container = new Container();
 
-    const length = shape.radius * 2;
-    const LANDER_LENGTH = length;
+    const LANDER_LENGTH = lander.radius * 2;
 
     const shuttle = new Graphics();
     shuttle.lineStyle(2, getLanderColor(lander.color, 10));
     drawPolyline(shuttle, SHUTTLE_SHAPES.cockpit, LANDER_LENGTH);
-    shuttle.lineStyle(1, grayDark.gray10);
+    shuttle.lineStyle(1, grayDark.gray11);
     drawSegments(shuttle, [
       SHUTTLE_SHAPES.middle,
       SHUTTLE_SHAPES.booster,
@@ -390,7 +393,25 @@ export class CanvasRenderer {
     const flame = new Graphics();
     flame.name = "flame";
 
+    const healthGauge = new Graphics();
+    healthGauge.name = "healthGauge";
+    drawLanderHealthGauge(lander, healthGauge);
+
+    const fuelGauge = new Container();
+    fuelGauge.name = "fuelGauge";
+    const fuelMeter = new Graphics();
+    fuelMeter.name = "fuelMeter";
+    fuelGauge.addChild(fuelMeter);
+    const fuelGaugeMask = new Graphics();
+    fuelGauge.addChild(fuelGaugeMask);
+    fuelGaugeMask.beginFill("#ffffff");
+    fuelGaugeMask.drawPolygon(SHUTTLE_SHAPES.booster.map(([x, y]) => ({x: x * LANDER_LENGTH, y: y * LANDER_LENGTH})));
+    fuelGauge.mask = fuelGaugeMask;
+    drawLanderFuelMeter(lander, fuelMeter);
+
+    container.addChild(healthGauge);
     container.addChild(flame);
+    container.addChild(fuelGauge);
     container.addChild(shuttle);
 
     return container;
@@ -443,7 +464,7 @@ export class CanvasRenderer {
     landingIndicator.addChild(vyText);
 
     landingIndicator.position.x = -lander.radius - 10;
-    landingIndicator.position.y = -lander.radius - (textHeight * 3) - 5;
+    landingIndicator.position.y = -lander.radius - (textHeight * 3) - 10;
     container.addChild(landingIndicator);
 
     return container;
@@ -513,6 +534,28 @@ function drawPolyline(gfx: Graphics, vertices: readonly (readonly [number, numbe
   for (let i=1; i<vertices.length; i++) {
     gfx.lineTo(vertices[i][0] * scale, vertices[i][1] * scale);
   }
+}
+
+function drawLanderHealthGauge(lander: Lander, healthGauge: Graphics) {
+  const LANDER_LENGTH = lander.radius * 2;
+  healthGauge.beginFill(tomatoDark.tomato8);
+  healthGauge.drawRect(
+    SHUTTLE_SHAPES.middle[0][0] * LANDER_LENGTH,
+    SHUTTLE_SHAPES.middle[0][1] * LANDER_LENGTH,
+    (SHUTTLE_SHAPES.middle[2][0] - SHUTTLE_SHAPES.middle[0][0]) * LANDER_LENGTH * (lander.health / 100),
+    (SHUTTLE_SHAPES.middle[2][1] - SHUTTLE_SHAPES.middle[0][1]) * LANDER_LENGTH,
+  );
+}
+
+function drawLanderFuelMeter(lander: Lander, fuelMeter: Graphics) {
+  const LANDER_LENGTH = lander.radius * 2;
+  fuelMeter.beginFill(getLanderColor(lander.color, 8));
+  fuelMeter.drawRect(
+    SHUTTLE_SHAPES.booster[1][0] * LANDER_LENGTH,
+    SHUTTLE_SHAPES.booster[0][1] * LANDER_LENGTH,
+    (SHUTTLE_SHAPES.booster[2][0] - SHUTTLE_SHAPES.booster[1][0]) * LANDER_LENGTH * (lander.fuel / 100),
+    (SHUTTLE_SHAPES.booster[2][1] - SHUTTLE_SHAPES.booster[0][1]) * LANDER_LENGTH,
+  );
 }
 
 export default CanvasRenderer;

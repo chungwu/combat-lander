@@ -58,11 +58,9 @@ export class BaseLanderEngine {
 
   protected restoreApplyReplay(restoreTime: number, func: () => void) {
     const curTime = this.timestep;
-    console.log(`[${this.timestep}] RESTORING TO ${restoreTime}`);
     if (this.restoreSnapshotTo(restoreTime)) {
       func();
       this.replayTo(curTime);
-      console.log(`[${this.timestep}] REPLAYED TO ${curTime}`);
       return true;
     }
     return false;

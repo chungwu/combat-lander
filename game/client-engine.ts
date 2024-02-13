@@ -113,16 +113,18 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   timerStep() {
-    // If there are player inputs from the future, apply them now
-    // before we step
-    this.applyPlayerInputsAt(m => m.time === this.timestep && m.playerId !== this.playerId);
-
-    super.timerStep();
-
-    // Garbage collect snapshots
-    if (this.timestep % CLIENT_SNAPSHOT_GC_FREQ === 0) {
-      this.garbageCollect(CLIENT_SNAPSHOT_GC_FREQ);
-    }
+    runInAction(() => {
+      // If there are player inputs from the future, apply them now
+      // before we step
+      this.applyPlayerInputsAt(m => m.time === this.timestep && m.playerId !== this.playerId);
+  
+      super.timerStep();
+  
+      // Garbage collect snapshots
+      if (this.timestep % CLIENT_SNAPSHOT_GC_FREQ === 0) {
+        this.garbageCollect(CLIENT_SNAPSHOT_GC_FREQ);
+      }
+    });
   }
 
   get playerId() {

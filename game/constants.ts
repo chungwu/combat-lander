@@ -27,7 +27,9 @@ export const LANDING_PAD_STATS = {
 export const LANDER_RADIUS = 10;
 export const TURN_RATE = 1; // rad/s
 export const THROTTLE_RATE = 1; // rad/s
-export const FULL_THROTTLE_FORCE = 40000;
+export const FULL_THROTTLE_FORCE = 35000;
+export const THROTTLE_FUEL_BURN_RATE = 3;
+export const ROTATE_FUEL_BURN_RATE = 1;
 
 export const LANDING_INDICATOR_THRESHOLD = 150;
 export const LANDING_SAFE_ROTATION = degreesToRadians(5); // 5 degrees
@@ -36,7 +38,7 @@ export const LANDING_SAFE_VY = 10;
 
 export const CONTACT_DAMAGE_FACTOR = {
   "ground": 3,
-  "sky": 0.1,
+  "sky": 0,
   "rocket": 0.5,
   "lander": 1
 } as const;
