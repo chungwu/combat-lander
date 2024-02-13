@@ -34,7 +34,28 @@ export const ROTATE_FUEL_BURN_RATE = 1;
 export const LANDING_INDICATOR_THRESHOLD = 150;
 export const LANDING_SAFE_ROTATION = degreesToRadians(5); // 5 degrees
 export const LANDING_SAFE_VX = 5;
-export const LANDING_SAFE_VY = 10;
+export const LANDING_SAFE_VY = 15;
+
+export const ROCKET_STATS = {
+  "small": {
+    radius: 10,
+    initialVelocity: 40,
+    aliveSteps: 60 * 30, // alive for 30s,
+    ammo: 5,
+    replenishSteps: 60 * 3, // 3 seconds to replenish a rocket
+    impulse: 15000,
+  },
+  "big": {
+    radius: 25,
+    initialVelocity: 40,
+    aliveSteps: 60 * 30,
+    ammo: 1,
+    replenishSteps: 60 * 10,
+    impulse: 50000,
+  } as const
+};
+
+export type RocketType = keyof typeof ROCKET_STATS;
 
 export const CONTACT_DAMAGE_FACTOR = {
   "ground": 3,
@@ -75,10 +96,6 @@ export function getLanderColor(color: LanderColor, level: 1|2|3|4|5|6|7|8|9|10|1
   const colors = LANDER_COLORS_MAP[color] as any;
   return colors[`${color}${level}`] as string;
 }
-
-// Rocket mechanics
-export const ROCKET_IMPULSE = 15000;
-
 
 // Sync mechanics
 export const PARTIAL_SYNC_FREQ = 60; // once per second

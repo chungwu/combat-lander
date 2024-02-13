@@ -42,11 +42,11 @@ export abstract class GameObject {
     this.collider = collider;
   }
 
-  preStep(dt: number) {
+  preStep(dt: number, timestep: number) {
 
   }
 
-  postStep(dt: number) {
+  postStep(dt: number, timestep: number) {
   }
 
   wrapTranslation(worldWidth: number) {

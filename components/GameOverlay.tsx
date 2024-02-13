@@ -10,32 +10,32 @@ import sty from "./GameOverlay.module.css";
 import { JoinGameDialog } from "./JoinGameDialog";
 import { Modal } from "./Modal";
 import classNames from "classnames";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { useClientEngine } from "./contexts";
+import { PseudoKeyboardEvent } from "@/game/controls";
+import { ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
+import { Lander } from "@/game/objects/lander";
 
-export const GameOverlay = observer(function GameOverlay(props: {
-  game: LanderGameState;
-  engine: ClientLanderEngine;
-}) {
-  const { game, engine } = props;
-
+export const GameOverlay = observer(function GameOverlay() {
   return (
     <div className={sty.root}>
-      <TopRight game={game} engine={engine} />
-      <MajorGameMessage game={game} engine={engine} />
-      <LeaderBoard game={game} engine={engine} />
-      <DamageFlasher game={game} engine={engine} />
+      <TopRight />
+      <MajorGameMessage />
+      <LeaderBoard />
+      <DamageFlasher />
+      <KeyboardControlsOverlay />
     </div>
   )
 });
 
-const TopRight = observer(function TopRight(props: {  
-  game: LanderGameState;
-  engine: ClientLanderEngine;
-}) {
-  const { game, engine } = props;
+const TopRight = observer(function TopRight(props: {}) {
+  const engine = useClientEngine();
+  const game = engine.game;
   return (
     <div className={sty.topRight}>
     {engine.isPlaying ? (
-      <ResetGameButton engine={engine} game={game} />
+      <ResetGameButton />
     ) : (
       <DialogTrigger>
         <Button
@@ -55,10 +55,9 @@ const TopRight = observer(function TopRight(props: {
 });
 
 const MajorGameMessage = observer(function MajorGameMessage(props: {
-  game: LanderGameState;
-  engine: ClientLanderEngine;
 }) {
-  const { game, engine } = props;
+  const engine = useClientEngine();
+  const game = engine.game;
   if (game.winnerPlayerId) {
     const lander = game.landers.find(l => l.id === game.winnerPlayerId);
     return (
@@ -87,10 +86,9 @@ const MajorGameMessage = observer(function MajorGameMessage(props: {
 })
 
 const ResetGameButton = observer(function ResetGameButton(props: {
-  game: LanderGameState;
-  engine: ClientLanderEngine;
 }) {
-  const { game, engine } = props;
+  const engine = useClientEngine();
+  const game = engine.game;
   if (!game.resetTimestamp) {
     return (
       <Button
@@ -118,10 +116,9 @@ function TimerTill(props: { target: number }) {
 }
 
 const LeaderBoard = observer(function LeaderBoard(props: {
-  game: LanderGameState;
-  engine: ClientLanderEngine;
 }) {
-  const { game, engine } = props;
+  const engine = useClientEngine();
+  const game = engine.game;
   if (game.landers.length <= 1) {
     return null;
   }
@@ -143,10 +140,8 @@ const LeaderBoard = observer(function LeaderBoard(props: {
 });
 
 const DamageFlasher = observer(function DamageFlasher(props: {
-  game: LanderGameState;
-  engine: ClientLanderEngine;
 }) {
-  const { game, engine } = props;
+  const engine = useClientEngine();
   const ref = React.useRef<HTMLDivElement>(null);
   const lander = engine.selfLander;
   React.useEffect(() => {
@@ -184,3 +179,222 @@ const DamageFlasher = observer(function DamageFlasher(props: {
     />
   );
 });
+
+const KeyboardControlsOverlay = observer(function KeyboardOverlay(props: {
+}) {
+  const engine = useClientEngine();
+  return (
+    <div className={sty.keyboardControlsOverlay}>
+      {engine.isPlaying && 
+        <>
+          <ArrowKeysOverlay />
+          <WeaponControlsOverlay />
+        </>
+      }
+    </div>
+  )
+});
+
+const WeaponControlsOverlay = observer(function WeaponControlsOverlay() {
+  const engine = useClientEngine();
+  const lander = engine.selfLander;
+  if (!lander) {
+    return null;
+  }
+  return (
+    <div className={sty.weaponControlsOverlay}>
+      <div className={sty.weaponRow}>
+        <div className={sty.weaponRowKey}>
+          <KeyboardKey keyboardKey="q">q</KeyboardKey>
+        </div>
+        <div className={sty.ammos}>
+          <RocketAmmos lander={lander} type={"small"} />
+        </div>
+      </div>
+      <div className={sty.weaponRow}>
+        <div className={sty.weaponRowKey}>
+          <KeyboardKey keyboardKey="w">w</KeyboardKey>
+        </div>
+        <div className={sty.ammos}>
+          <RocketAmmos lander={lander} type={"big"} />
+        </div>
+      </div>
+    </div>
+  )
+});
+
+const RocketAmmos = observer(function RocketAmmos(props: {
+  lander: Lander;
+  type: RocketType;
+}) {
+  const { lander, type } = props;
+
+  const STATS = ROCKET_STATS[type];
+  const state = lander.rocketState[type];
+  return (
+    <>
+      {new Array(STATS.ammo).fill(0).map((_, index) => (
+        <Rocket 
+          color={getLanderColor(lander.color, 8)}
+          type={type}
+          state={index < state.count ? "available" : index === state.count ? "refilling" : "used"}
+        /> 
+      ))}
+    </>
+  )
+});
+
+const Rocket = observer(function Rocket(props: {
+  color: string;
+  state: "available" | "used" | "refilling";
+  type: RocketType
+}) {
+  const { color, state, type } = props;
+  const size = type === "small" ? 18 : 32;
+  return (
+    <div
+      className={classNames(sty.rocket, {
+        [sty.rocketUsed]: state === "used",
+        [sty.rocketRefilling]: state === "refilling"
+      })}
+      style={{
+        borderColor: color,
+        width: size,
+        height: size
+      }}
+    >
+      {state === "refilling" ? (
+        <RefillingRocketProgress color={color} type={type} />
+      ) : state === "available" ? (
+        <div className={sty.rocketProgress} 
+          style={{
+            backgroundColor: color,
+            width: "100%",
+          }}
+        />
+      ) : null}
+    </div>
+  );
+});
+
+const RefillingRocketProgress = observer(function RefillingRocketProgress(props: {
+  color: string;
+  type: RocketType;
+}) {
+  const { type, color } = props;
+  const engine = useClientEngine();
+  const lander = engine.selfLander;
+  if (!lander) {
+    return null;
+  }
+  const progress = (engine.timestep - (lander.rocketState[type].replenishFromTimestep)) / ROCKET_STATS[type].replenishSteps;
+  return (
+    <div className={sty.rocketProgress} 
+      style={{
+        backgroundColor: color,
+        width: `${Math.min(1, progress) * 100}%`,
+      }}
+    />
+  );
+})
+
+const ArrowKeysOverlay = observer(function ArrowKeysOverlay(props: {
+}) {
+  return (
+    <div className={classNames(sty.arrowKeysOverlay)} style={{display: "flex", flexDirection: "column", gap: 8}}>
+      <div style={{display: "flex", justifyContent: "center"}}>
+        <KeyboardKey keyboardKey="ArrowUp">
+          <FontAwesomeIcon icon={faArrowUp} />
+        </KeyboardKey>
+      </div>
+      <div style={{display: "flex", justifyContent: "center", gap: 8}}>
+        <KeyboardKey keyboardKey="ArrowLeft">
+          <FontAwesomeIcon icon={faArrowLeft} />
+        </KeyboardKey>
+        <KeyboardKey keyboardKey="ArrowDown">
+          <FontAwesomeIcon icon={faArrowDown} />
+        </KeyboardKey>
+        <KeyboardKey keyboardKey="ArrowRight">
+          <FontAwesomeIcon icon={faArrowRight} />
+        </KeyboardKey>
+      </div>
+    </div>
+  )
+});
+
+interface KeyboardKeyRef {
+  flash: () => void;
+  showPressed: () => void;
+  showUnpressed: () => void;
+}
+const KeyboardKey = observer(function KeyboardKey(props: {
+  children?: React.ReactNode;
+  keyboardKey: string;
+}, ref: React.Ref<KeyboardKeyRef>) {
+  const { children, keyboardKey } = props;
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const bgRef = React.useRef<HTMLDivElement>(null);
+  const [pressed, setPressed] = React.useState(false);
+  const engine = useClientEngine();
+  const controller = engine.controller;
+
+  const flash = React.useCallback(() => {
+    if (bgRef.current) {
+      bgRef.current.animate([
+        { opacity: 0 },
+        { opacity: 0.75 },
+        { opacity: 0 },
+      ], {duration: 200, iterations: 1});
+    }
+  }, [bgRef]);
+
+  React.useImperativeHandle(ref, () => ({
+    flash,
+    showPressed: () => {
+      setPressed(true);
+    },
+    showUnpressed: () => {
+      setPressed(false);
+    }
+  }), [bgRef, setPressed, flash]);
+
+  React.useEffect(() => {
+    const listener = (event: PseudoKeyboardEvent) => {
+      if (event.key === keyboardKey) {
+        if (event.type === "keydown") {
+          setPressed(true);
+        } else if (event.type === "keyup") {
+          setPressed(false);
+        } else if (event.type === "keypress") {
+          flash();
+        }
+      }
+    };
+    controller.addListener(listener);
+    return () => {
+      controller.removeListener(listener);
+    }
+  }, [controller, keyboardKey]);
+  return (
+    <button 
+      className={classNames(sty.key)} 
+      ref={buttonRef}
+      onClick={() => {
+        controller.handleKeyEvent({type: "keypress", key: keyboardKey});
+      }}
+      onMouseDown={() => {
+        setPressed(true);
+        controller.handleKeyEvent({type: "keydown", key: keyboardKey});
+      }}
+      onMouseUp={() => {
+        setPressed(false)
+        controller.handleKeyEvent({type: "keyup", key: keyboardKey});
+      }}
+    >
+      <div className={classNames(sty.keyBg, {
+        [sty.keyBgPressed]: pressed
+      })} ref={bgRef} />
+      {children}
+    </button>
+  );
+}, {forwardRef: true})

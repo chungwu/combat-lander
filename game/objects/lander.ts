@@ -1,7 +1,7 @@
 import Rapier, { ActiveCollisionTypes, ActiveEvents, Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
 import { LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
-import { FULL_THROTTLE_FORCE, LANDER_RADIUS, LanderColor, ROTATE_FUEL_BURN_RATE, THROTTLE_FUEL_BURN_RATE, THROTTLE_RATE, TURN_RATE } from "../constants";
+import { FULL_THROTTLE_FORCE, LANDER_RADIUS, LanderColor, ROCKET_STATS, ROTATE_FUEL_BURN_RATE, RocketType, THROTTLE_FUEL_BURN_RATE, THROTTLE_RATE, TURN_RATE } from "../constants";
 import { normalizeAngle, rotateVector } from "@/utils/math";
 import pick from "lodash/pick";
 import { GameInputEvent } from "@/messages";
@@ -19,7 +19,8 @@ const SERIALIZED_FIELDS = [
   "name", 
   "color",
   "throttle", "targetRotation", "health", "fuel", 
-  "rotatingLeft", "rotatingRight", "thrustingUp", "thrustingDown"
+  "rotatingLeft", "rotatingRight", "thrustingUp", "thrustingDown",
+  "rocketState",
 ] as const;
 SERIALIZED_FIELDS satisfies readonly (keyof Lander)[];
 
@@ -35,6 +36,16 @@ export class Lander extends GameObject {
   public rotatingRight = false;
   public thrustingUp = false;
   public thrustingDown = false;
+  public rocketState: Record<RocketType, { count: number, replenishFromTimestep: number}> = {
+    "small": {
+      count: ROCKET_STATS.small.ammo,
+      replenishFromTimestep: 0,
+    },
+    "big": {
+      count: ROCKET_STATS.big.ammo,
+      replenishFromTimestep: 0
+    }
+  };
 
   static create(game: LanderGameState, opts: LanderOpts & { startingLocation: Vector }) {
     const body = game.world.createRigidBody(
@@ -63,6 +74,7 @@ export class Lander extends GameObject {
     this.color = opts.color;
     makeObservable(this, {
       health: observable,
+      rocketState: observable,
     });
   }
 
@@ -118,8 +130,8 @@ export class Lander extends GameObject {
     return this.health > 0;
   }
 
-  preStep(dt: number) {
-    super.preStep(dt);
+  preStep(dt: number, timestep: number) {
+    super.preStep(dt, timestep);
 
     this.body.resetForces(false);
     if (this.fuel === 0) {
@@ -162,6 +174,15 @@ export class Lander extends GameObject {
         const newRotation = normalizeAngle(rotation + sign * delta);
         this.body.setRotation(newRotation, true);
         this.fuel = Math.max(0, this.fuel - ROTATE_FUEL_BURN_RATE * dt);
+      }
+    }
+
+    // Replenish weapons
+    for (const rocketType of ["small", "big"] as const) {
+      const rocketState = this.rocketState[rocketType];
+      if (rocketState.count < ROCKET_STATS[rocketType].ammo && (timestep - rocketState.replenishFromTimestep) > ROCKET_STATS[rocketType].replenishSteps) {
+        rocketState.count += 1;
+        rocketState.replenishFromTimestep = timestep;
       }
     }
   }

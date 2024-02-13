@@ -29,8 +29,8 @@ export function generateRandomMap(opts?: {
     vertices: verticesWithPads,
     landingPads
   } = addLandingPads(vertices, {
-    worldWidth, numShortLandingPads: opts?.numShortLandingPads ?? 4,
-    numLongLandingPads: opts?.numLongLandingPads ?? 4
+    worldWidth, numShortLandingPads: opts?.numShortLandingPads ?? 1,
+    numLongLandingPads: opts?.numLongLandingPads ?? 1
   });
 
   return new Moon(worldWidth, worldHeight, verticesWithPads, GRAVITY, landingPads);

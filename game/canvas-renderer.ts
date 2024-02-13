@@ -513,11 +513,26 @@ export class CanvasRenderer {
   }
 
   private createLandingPadGraphics(pad: LandingPad) {
+    const width = LANDING_PAD_STATS[pad.type].width;
+
+    const container = new Container();
     const gfx = new Graphics();
+    container.addChild(gfx);
     gfx.lineStyle(2, yellowDark.yellow10);
     gfx.moveTo(0, 0);
-    gfx.lineTo(LANDING_PAD_STATS[pad.type].width, 0);
-    return gfx;
+    gfx.lineTo(width, 0);
+
+    const text = new Text(`${LANDING_PAD_STATS[pad.type].multiplier}x`, {
+      fontFamily: MONO.style.fontFamily,
+      fontSize: "10px",
+      fill: grayDark.gray11,
+      align: "center"
+    });
+    text.position.x = width / 2 - 6;
+    text.position.y = 5;
+    container.addChild(text);
+
+    return container;
   }
 }
 

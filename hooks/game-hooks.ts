@@ -32,13 +32,12 @@ export function useLanderSocket(roomId: string) {
 
   React.useEffect(() => {
     if (game && engine) {
-      const controller = new KeyboardController(engine);
-      controller.install();
+      engine.controller.install();
       const id = setInterval(() => {
         engine.timerStep(); 
       }, 1000/60);
       return () => {
-        controller.uninstall();
+        engine.controller.uninstall();
         clearInterval(id);
       }
     }

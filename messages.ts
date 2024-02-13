@@ -1,5 +1,5 @@
+import { RocketType } from "./game/constants";
 import type { LanderGameState } from "./game/game-state";
-import type { RocketType } from "./game/rocket";
 
 interface Message {
   time: number;

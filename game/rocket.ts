@@ -5,9 +5,7 @@ import { Lander } from "./objects/lander";
 import pick from "lodash/pick";
 import { nanoid } from "nanoid";
 import pull from "lodash/pull";
-import { getLanderColor } from "./constants";
-
-export type RocketType = "small" | "big";
+import { ROCKET_STATS, RocketType, getLanderColor } from "./constants";
 
 const SERIALIZED_FIELDS = [
   "id",
@@ -64,8 +62,8 @@ export class Rocket extends GameObject {
     this.color = opts.color;
   }
 
-  postStep(dt: number) {
-    super.postStep(dt);
+  postStep(dt: number, timestep: number) {
+    super.postStep(dt, timestep);
     this.aliveSteps += 1;
   }
 
@@ -99,16 +97,3 @@ export class Rocket extends GameObject {
     this.updateCollider(world, data.handle);
   }
 }
-
-const ROCKET_STATS = {
-  "small": {
-    radius: 10,
-    initialVelocity: 40,
-    aliveSteps: 60 * 30, // alive for 30s,
-  },
-  "big": {
-    radius: 25,
-    initialVelocity: 40,
-    aliveSteps: 60 * 30,
-  } as const
-};

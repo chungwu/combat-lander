@@ -2,6 +2,7 @@ import { useLanderSocket } from "@/hooks/game-hooks";
 import { GameCanvas } from "./GameCanvas";
 import sty from "./Room.module.css";
 import { GameOverlay } from "./GameOverlay";
+import { ClientEngineProvider } from "./contexts";
 
 export function Room(props: {
   roomId: string
@@ -14,10 +15,10 @@ export function Room(props: {
   return (
     <div className={sty.root}>
       {game && engine && (
-        <>
+        <ClientEngineProvider engine={engine}>
           <GameCanvas game={game} playerId={engine.playerId}/>
-          <GameOverlay game={game} engine={engine} />
-        </>
+          <GameOverlay />
+        </ClientEngineProvider>
       )}
     </div>
   );

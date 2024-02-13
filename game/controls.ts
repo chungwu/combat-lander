@@ -1,10 +1,19 @@
+import { pull } from "lodash";
 import { ClientLanderEngine } from "./client-engine";
+
+export interface PseudoKeyboardEvent {
+  type: "keyup" | "keydown" | "keypress";
+  key: string;
+}
+
+export type KeyEventListener = (event: PseudoKeyboardEvent) => void;
 
 export class KeyboardController {
   private pressingUp = false;
   private pressingDown = false;
   private pressingLeft = false;
   private pressingRight = false;
+  private listeners: KeyEventListener[] = [];
   constructor(private engine: ClientLanderEngine) {
 
   }
@@ -21,11 +30,48 @@ export class KeyboardController {
     document.removeEventListener("keypress", this.onKeyPress);
   }
 
+  handleKeyEvent(event: PseudoKeyboardEvent) {
+    if (event.type === "keyup") {
+      this.handleKeyUp(event);
+    } else if (event.type === "keydown") {
+      this.handleKeyDown(event);
+    } else if (event.type === "keypress") {
+      this.handleKeyPress(event);
+    }
+  }
+
+  addListener(listener: KeyEventListener) {
+    this.listeners.push(listener);
+  }
+
+  removeListener(listener: KeyEventListener) {
+    pull(this.listeners, listener);
+  }
+
+  private fireEvent(event: KeyboardEvent) {
+    this.listeners.forEach(listener => listener(event as PseudoKeyboardEvent));
+  }
+
   private get selfLander() {
     return this.engine.selfLander;
   }
 
   private onKeyDown = (event: KeyboardEvent) => {
+    this.handleKeyDown(event as PseudoKeyboardEvent);
+    this.fireEvent(event);
+  }
+
+  private onKeyUp = (event: KeyboardEvent) => {
+    this.handleKeyUp(event as PseudoKeyboardEvent);
+    this.fireEvent(event);
+  }
+
+  private onKeyPress = (event: KeyboardEvent) => {
+    this.handleKeyPress(event as PseudoKeyboardEvent);
+    this.fireEvent(event);
+  }
+
+  private handleKeyDown(event: PseudoKeyboardEvent) {
     const lander = this.selfLander;
     if (!lander) {
       return;
@@ -56,9 +102,9 @@ export class KeyboardController {
         });
       }
     }
-  };
+  }
 
-  private onKeyUp = (event: KeyboardEvent) => {
+  private handleKeyUp(event: PseudoKeyboardEvent) {
     const lander = this.selfLander;
     if (!lander) {
       return;
@@ -88,19 +134,25 @@ export class KeyboardController {
         });
       }
     }
-  };
+  }
 
-  private onKeyPress = (event: KeyboardEvent) => {
+  private handleKeyPress(event: PseudoKeyboardEvent) {
     if (!this.selfLander) {
       return;
     }
 
-    if (event.key === "q" && this.selfLander.isAlive()) {
-      this.engine.processLocalInput({
-        type: "fire-rocket", rocketType: "small"
-      });
+    if (this.selfLander.isAlive()) {
+      if (event.key === "q") {
+        this.engine.processLocalInput({
+          type: "fire-rocket", rocketType: "small"
+        });
+      } else if (event.key === "w") {
+        this.engine.processLocalInput({
+          type: "fire-rocket", rocketType: "big"
+        });
+      }
     }
-  };
+  }
 
   private deriveArrowKeyDirection(key: string) {
     if (key.startsWith("Arrow")) {

@@ -11,7 +11,7 @@ export class BaseLanderEngine {
   protected playerInputs: PlayerInputMessage[] = [];
 
   constructor(
-    protected game: LanderGameState,
+    public game: LanderGameState,
     protected snapshotFreq: number,
   ) {}
 
@@ -48,7 +48,7 @@ export class BaseLanderEngine {
 
   protected stepOne() {
     this.preStepOne();
-    this.game.step();
+    this.game.step(this.timestep);
     this.postStepOne();
     this.timestep += 1;
     if (this.timestep % this.snapshotFreq === 0) {
@@ -88,7 +88,7 @@ export class BaseLanderEngine {
   }
 
   protected applyPlayerInput(playerId: string, event: GameInputEvent) {
-    this.game.applyPlayerInput(playerId, event);
+    this.game.applyPlayerInput(playerId, event, this.timestep);
   }
 
   protected saveSnapshot() {

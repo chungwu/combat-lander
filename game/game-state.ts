@@ -5,7 +5,7 @@ import { EventQueue, Vector2, World } from "@dimforge/rapier2d";
 import assert from "assert";
 import pull from "lodash/pull";
 import { makeObservable, observable } from "mobx";
-import { CONTACT_DAMAGE_FACTOR, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, ROCKET_IMPULSE } from "./constants";
+import { CONTACT_DAMAGE_FACTOR, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, ROCKET_STATS } from "./constants";
 import { Moon, generateRandomMap } from "./map";
 import { Ground } from "./objects/ground";
 import { Lander } from "./objects/lander";
@@ -74,7 +74,7 @@ export class LanderGameState {
     });
   }
 
-  step() {
+  step(timestep: number) {
     // If there's a winner, no more stepping!
     if (this.winnerPlayerId) {
       return;
@@ -83,7 +83,7 @@ export class LanderGameState {
     const world = this.world;
     const dt = world.timestep;
     for (const steppable of this.steppables()) {
-      steppable.preStep(dt);
+      steppable.preStep(dt, timestep);
     }
 
     this.world.step(this.eventQueue);
@@ -119,7 +119,7 @@ export class LanderGameState {
     });
 
     for (const steppable of this.steppables()) {
-      steppable.postStep(dt);
+      steppable.postStep(dt, timestep);
       steppable.wrapTranslation(this.moon.worldWidth);
     }
   }
@@ -154,16 +154,20 @@ export class LanderGameState {
     }
   }
 
-  applyPlayerInput(playerId: string, event: GameInputEvent) {
+  applyPlayerInput(playerId: string, event: GameInputEvent, timestep: number) {
     const lander = this.landers.find(l => l.id === playerId);
     if (lander && lander.isAlive()) {
       if (event.type === "fire-rocket") {
         assert(isServer(), "Can only handle fire-rocket on the server");
-        const rocket = Rocket.create(
-          this, lander, { rocketType: event.rocketType, }
-        );
-        this.rockets.push(rocket);
-        this.fireRocket(lander, rocket);
+        if (lander.rocketState[event.rocketType].count > 0) {
+          const rocket = Rocket.create(
+            this, lander, { rocketType: event.rocketType, }
+          );
+          this.rockets.push(rocket);
+          this.fireRocket(lander, rocket);
+          lander.rocketState[event.rocketType].count -= 1;
+          lander.rocketState[event.rocketType].replenishFromTimestep = timestep;
+        }
       } else {
         lander.processInput(event);
       }
@@ -191,7 +195,7 @@ export class LanderGameState {
     // because the rockets are already physically unrealistic
     // (their mass and size is similar to a lander's) so we need
     // disporportionally more impulse on it to fire it away
-    const impulse = new Vector2(0, ROCKET_IMPULSE);
+    const impulse = new Vector2(0, ROCKET_STATS[rocket.rocketType].impulse);
     rocket.body.applyImpulse(rotateVector(scaleVector(impulse, -5), landerAngle), true);
     lander.body.applyImpulse(rotateVector(scaleVector(impulse, 1), landerAngle), true);
   }

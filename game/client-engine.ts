@@ -4,10 +4,12 @@ import { LanderGameState } from "./game-state";
 import { BaseLanderEngine } from "./engine";
 import assert from "assert";
 import { CLIENT_SNAPSHOT_FREQ, CLIENT_SNAPSHOT_GC_FREQ, PARTIAL_SYNC_FREQ } from "./constants";
-import { computed, makeObservable, runInAction } from "mobx";
+import { computed, makeObservable, observable, runInAction } from "mobx";
+import { KeyboardController } from "./controls";
 
 export class ClientLanderEngine extends BaseLanderEngine {
   private lastSyncTimestep: number;
+  public controller: KeyboardController;
   constructor(
     state: LanderGameState,
     private socket: PartySocket,
@@ -17,8 +19,10 @@ export class ClientLanderEngine extends BaseLanderEngine {
     this.timestep = initialTimeStep;
     this.initialTimeStep = initialTimeStep;
     this.lastSyncTimestep = initialTimeStep;
+    this.controller = new KeyboardController(this);
     makeObservable(this, {
-      selfLander: computed
+      selfLander: computed,
+      timestep: observable,
     });
   }
 
