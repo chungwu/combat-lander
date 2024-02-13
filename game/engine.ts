@@ -49,8 +49,8 @@ export class BaseLanderEngine {
   protected stepOne() {
     this.preStepOne();
     this.game.step();
-    this.timestep += 1;
     this.postStepOne();
+    this.timestep += 1;
     if (this.timestep % this.snapshotFreq === 0) {
       this.saveSnapshot();
     }
@@ -58,19 +58,14 @@ export class BaseLanderEngine {
 
   protected restoreApplyReplay(restoreTime: number, func: () => void) {
     const curTime = this.timestep;
-    if (curTime === restoreTime) {
+    console.log(`[${this.timestep}] RESTORING TO ${restoreTime}`);
+    if (this.restoreSnapshotTo(restoreTime)) {
       func();
+      this.replayTo(curTime);
+      console.log(`[${this.timestep}] REPLAYED TO ${curTime}`);
       return true;
-    } else {
-      console.log(`[${this.timestep}] RESTORING TO ${restoreTime} FROM ${curTime}`);
-      if (this.restoreSnapshotTo(restoreTime)) {
-        func();
-        this.replayTo(curTime);
-        console.log(`[${this.timestep}] REPLAYED TO ${curTime}`, this.game.world);
-        return true;
-      }
-      return false;
     }
+    return false;
   }
 
   protected replayTo(targetTime: number) {
@@ -124,6 +119,9 @@ export class BaseLanderEngine {
   }
 
   protected restoreSnapshotTo(time: number) {
+    if (time === this.timestep) {
+      return true;
+    }
     const snapshot = this.findClosestSnapshot(time);
     if (snapshot) {
       console.log(`[${this.timestep}] FOUND closest ${snapshot.time}`);

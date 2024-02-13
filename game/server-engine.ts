@@ -5,7 +5,7 @@ import { BaseLanderEngine } from "./engine";
 import { LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
 import { PACKR } from "./packr";
-import { LANDER_COLORS, LanderColor, PARTIAL_SYNC_FREQ, RESET_GAME_WAIT, SERVER_SNAPSHOT_FREQ, SERVER_SNAPSHOT_GC_FREQ } from "./constants";
+import { LANDER_COLORS, LANDING_PAD_STATS, LanderColor, PARTIAL_SYNC_FREQ, RESET_GAME_WAIT, SERVER_SNAPSHOT_FREQ, SERVER_SNAPSHOT_GC_FREQ, WON_GAME_WAIT } from "./constants";
 import random from "lodash/random";
 import pull from "lodash/pull";
 
@@ -79,35 +79,40 @@ export class ServerLanderEngine extends BaseLanderEngine {
       setTimeout(() => {
         if (this.game.resetTimestamp != undefined) {
           // Really reset the game!
-          const prevGame = this.game;
-          const newGame = LanderGameState.createNew();
-          this.game = newGame;
-
-          // Add existing players, preserving color
-          for (const lander of prevGame.landers) {
-            // only keep landers that are still connected
-            if (this.viewerIds.includes(lander.id)) {
-              this.addPlayer({
-                id: lander.id,
-                name: lander.name,
-                color: lander.color
-              });
-            }
-          }
-          this.timestep = 0;
-          this.reset();
-          this.broadcast({
-            type: "reset",
-            paylod: this.game.serializeFull(),
-            gameId: this.game.id,
-            time: this.timestep
-          });
+          this.resetGame();
         }
       }, waitTime);
     } else if (msg.type === "cancel-reset") {
       this.game.resetTimestamp = undefined;
       this.broadcast(this.makeMetaMessage());
     }
+  }
+
+  private resetGame() {
+    const prevGame = this.game;
+    const newGame = LanderGameState.createNew();
+    this.game = newGame;
+
+    // Add existing players, preserving color
+    for (const lander of prevGame.landers) {
+      // only keep landers that are still connected
+      if (this.viewerIds.includes(lander.id)) {
+        this.addPlayer({
+          id: lander.id,
+          name: lander.name,
+          color: lander.color
+        });
+        newGame.playerWins[lander.id] = prevGame.playerWins[lander.id];
+      }
+    }
+    this.timestep = 0;
+    this.reset();
+    this.broadcast({
+      type: "reset",
+      paylod: this.game.serializeFull(),
+      gameId: this.game.id,
+      time: this.timestep
+    });
   }
 
   onConnect(conn: Connection) {
@@ -129,6 +134,36 @@ export class ServerLanderEngine extends BaseLanderEngine {
     this.shouldImmediatelyBroadcastSync = false;
 
     super.timerStep();
+
+    if (!this.game.winnerPlayerId) {
+      // if any lander has successfully landed, that lander wins
+      for (const lander of this.game.landers) {
+        const pad = this.game.isSafelyLanded(lander);
+        if (pad) {
+          this.game.winnerPlayerId = lander.id;
+          this.game.addWins(lander.id, LANDING_PAD_STATS[pad.type].multiplier);
+        }
+      }
+
+      // if any lander is the last one standing, that lander wins
+      const controlledLanders = this.game.landers.filter(l => this.viewerIds.includes(l.id));
+      const aliveLanders = controlledLanders.filter(l => l.isAlive());
+      if (controlledLanders.length > 1 && aliveLanders.length === 1) {
+        this.game.winnerPlayerId = aliveLanders[0].id
+        this.game.addWins(aliveLanders[0].id, 1);
+      }
+
+      if (this.game.winnerPlayerId) {
+        const waitTime = 1000 * WON_GAME_WAIT;
+        this.game.resetTimestamp = new Date().getTime() + waitTime
+        this.broadcast(this.makeMetaMessage());
+        setTimeout(() => {
+          if (this.game.resetTimestamp != undefined) {
+            this.resetGame();
+          }
+        }, waitTime);
+      }
+    }
 
     // Send partial state update every second
     if (this.timestep % PARTIAL_SYNC_FREQ === 0 || this.shouldImmediatelyBroadcastSync) {

@@ -6,12 +6,15 @@ import { Ball, Cuboid, Polyline, ShapeType } from "@dimforge/rapier2d";
 import assert from "assert";
 import { Ground } from "./objects/ground";
 import { GameObject } from "./objects/game-object";
-import { WORLD_WIDTH, getLanderColor } from "./constants";
+import { LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, WORLD_WIDTH, getLanderColor } from "./constants";
 import { Rocket } from "./rocket";
 import { Sky } from "./objects/sky";
 import { MONO } from "@/fonts";
 import { Moon } from "./map";
-import { tomatoDark } from "@radix-ui/colors";
+import { greenDark, tomatoDark, yellowDark } from "@radix-ui/colors";
+import { LandingPad } from "./objects/landing-pad";
+import { radianToDegrees, vectorDistance } from "@/utils/math";
+import { ensure, ensureInstance } from "@/utils/utils";
 
 type RenderedObjects = [Container, Container, Container];
 
@@ -95,7 +98,7 @@ export class CanvasRenderer {
     this.viewport.screenHeight = window.innerHeight;
   }
 
-  render(game: LanderGameState, playerId: string | undefined) {
+  render(game: LanderGameState, playerId: string) {
     if (!this.curGameId || this.curGameId !== game.id) {
       // Game changed!  Clear everything
       this.reset();
@@ -133,7 +136,7 @@ export class CanvasRenderer {
       }
       const label = this.handle2label.get(object.handle);
       if (label) {
-        this.updateObjectLabel(object, label);
+        this.updateObjectLabel(game, object, label, playerId);
         updateObjectLabelPositions(game, object, label);
       }
     };
@@ -166,6 +169,9 @@ export class CanvasRenderer {
     for (const rocket of game.rockets) {
       handleObject(rocket);
     }
+    for (const pad of game.landingPads) {
+      handleObject(pad);
+    }
 
     for (const [ handle, gfxs ] of Array.from(this.handle2gfx.entries())) {
       if (!seenHandles.has(handle)) {
@@ -189,7 +195,7 @@ export class CanvasRenderer {
     this.handle2gfx.delete(handle);
   }
 
-  private updateViewport(game: LanderGameState, playerId: string | undefined) {
+  private updateViewport(game: LanderGameState, playerId: string) {
     this.viewport.worldHeight = game.moon.worldHeight;
 
     const minZoom = this.viewport.screenWidth / this.viewport.worldWidth;
@@ -235,6 +241,8 @@ export class CanvasRenderer {
       return this.createSkyGraphics(object);
     } else if (object instanceof Rocket) {
       return this.createRocketGraphics(object);
+    } else if (object instanceof LandingPad) {
+      return this.createLandingPadGraphics(object);
     } else {
       throw new Error(`Unknown game object ${object}`);
     }
@@ -254,9 +262,10 @@ export class CanvasRenderer {
     }
   }
 
-  private updateObjectLabel(object: GameObject, gfx: DisplayObject) {
+  private updateObjectLabel(
+    game: LanderGameState, object: GameObject, gfx: DisplayObject, playerId: string) {
     if (object instanceof Lander) {
-      this.updateLanderLabel(object, gfx);
+      this.updateLanderLabel(game, object, gfx, playerId);
     }
   }
 
@@ -285,23 +294,67 @@ export class CanvasRenderer {
     }
   }
 
-  private updateLanderLabel(lander: Lander, gfx: DisplayObject) {
+  private updateLanderLabel(game: LanderGameState, lander: Lander, gfx: DisplayObject, playerId: string) {
     assert(gfx instanceof Container);
-    const landerName = gfx.getChildByName("landerName");
-    if (landerName instanceof Text) {
-      if (landerName.text !== lander.name) {
-        landerName.text = lander.name;
-      }
+    const landerName = ensureInstance(gfx.getChildByName("landerName"), Text);
+    if (landerName.text !== lander.name) {
+      landerName.text = lander.name;
     }
-    const landerHealth = gfx.getChildByName("landerHealth");
-    if (landerHealth instanceof Text) {
-      if (landerHealth.text !== `${Math.ceil(lander.health)}`) {
-        landerHealth.text = `${Math.ceil(lander.health)}`;
-      }
+    // don't need to show your own name
+    if (playerId === lander.id) {
+      landerName.visible = false;
+    }
+
+    const landerHealth = ensureInstance(gfx.getChildByName("landerHealth"), Text);
+    if (landerHealth.text !== `${Math.ceil(lander.health)}`) {
+      landerHealth.text = `${Math.ceil(lander.health)}`;
+    }
+
+    let landingIndicator = ensureInstance(gfx.getChildByName("landingIndicator"), Container);
+    const pad = game.findClosestPad(lander);
+    const distance = vectorDistance(pad, lander);
+    if (distance < LANDING_INDICATOR_THRESHOLD && lander.id === playerId) {
+      landingIndicator.visible = true;
+      landerHealth.visible = false;
+      landingIndicator.removeChildren();
+
+      const angle = Math.abs(radianToDegrees(lander.rotation));
+      const vx = Math.abs(lander.body.linvel().x);
+      const vy = Math.abs(lander.body.linvel().y);
+
+      const safeColor = greenDark.green10;
+      const dangerColor = tomatoDark.tomato10;
+      const angleText = new Text(`Angle: ${angle.toFixed(2)}°`, {
+        fontSize: "10px",
+        fontFamily: MONO.style.fontFamily,
+        fill: Math.abs(lander.rotation) > LANDING_SAFE_ROTATION ? dangerColor : safeColor
+      });
+      landingIndicator.addChild(angleText);
+
+      const vxText = new Text(`Speed X: ${vx.toFixed(2)}`, {
+        fontSize: "10px",
+        fontFamily: MONO.style.fontFamily,
+        fill: vx > LANDING_SAFE_VX ? dangerColor : safeColor
+      });
+      vxText.position.y = angleText.height;
+      landingIndicator.addChild(vxText);
+
+      const vyText = new Text(`Speed Y: ${vy.toFixed(2)}`, {
+        fontSize: "10px",
+        fontFamily: MONO.style.fontFamily,
+        fill: vy > LANDING_SAFE_VY ? dangerColor : safeColor
+      });
+      vyText.position.y = angleText.height + vxText.height;
+      landingIndicator.addChild(vyText);
+      landingIndicator.position.y = -lander.radius - vxText.height - vyText.height - angleText.height - 5;
+    } else {
+      landingIndicator.visible = false;
+      landerHealth.visible = true;
     }
 
     if (!lander.isAlive()) {
       gfx.alpha = 0.5;
+      landerHealth.visible = false;
     }
   }
 
@@ -347,9 +400,15 @@ export class CanvasRenderer {
       fontFamily: MONO.style.fontFamily
     });
     landerHealth.name = "landerHealth";
-    landerHealth.position.y = -lander.radius - 10;
-    landerHealth.position.x = -lander.radius - 10;
+    landerHealth.position.y = -lander.radius - 13;
+    landerHealth.position.x = -lander.radius - 13;
     container.addChild(landerHealth);
+
+    const landingIndicator = new Container();
+    landingIndicator.name = "landingIndicator";
+    landingIndicator.position.x = -lander.radius - 10;
+    landingIndicator.position.y = -lander.radius - 10;
+    container.addChild(landingIndicator);
 
     this.screenRoot.addChild(container);
     return container;
@@ -396,6 +455,15 @@ export class CanvasRenderer {
       [-shape.halfExtents.x, shape.halfExtents.y],
       [-shape.halfExtents.x, -shape.halfExtents.y],
     ]])
+    this.viewport.addChild(gfx);
+    return gfx;
+  }
+
+  private createLandingPadGraphics(pad: LandingPad) {
+    const gfx = new Graphics();
+    gfx.lineStyle(2, yellowDark.yellow10);
+    gfx.moveTo(0, 0);
+    gfx.lineTo(LANDING_PAD_STATS[pad.type].width, 0);
     this.viewport.addChild(gfx);
     return gfx;
   }

@@ -12,3 +12,18 @@
   right: 24px;
   display: flex;
 }
+
+.leaderBoard {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(8px);
+}
+
+.leaderBoardItem {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}

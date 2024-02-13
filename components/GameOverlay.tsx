@@ -2,10 +2,12 @@ import { ClientLanderEngine } from "@/game/client-engine";
 import { LanderGameState } from "@/game/game-state";
 import sty from "./GameOverlay.module.css";
 import { Button } from "./Button";
-import { DialogTrigger, Input } from "react-aria-components";
+import { DialogTrigger, Heading, Input } from "react-aria-components";
 import { JoinGameDialog } from "./JoinGameDialog";
 import { observer } from "mobx-react-lite";
 import React from "react";
+import { Modal } from "./Modal";
+import sortBy from "lodash/sortBy";
 
 export const GameOverlay = observer(function GameOverlay(props: {
   game: LanderGameState;
@@ -16,6 +18,8 @@ export const GameOverlay = observer(function GameOverlay(props: {
   return (
     <div className={sty.root}>
       <TopRight game={game} engine={engine} />
+      <MajorGameMessage game={game} engine={engine} />
+      <LeaderBoard game={game} engine={engine} />
     </div>
   )
 });
@@ -47,18 +51,44 @@ const TopRight = observer(function TopRight(props: {
   );
 });
 
+const MajorGameMessage = observer(function MajorGameMessage(props: {
+  game: LanderGameState;
+  engine: ClientLanderEngine;
+}) {
+  const { game, engine } = props;
+  if (game.winnerPlayerId) {
+    const lander = game.landers.find(l => l.id === game.winnerPlayerId);
+    return (
+      <Modal modalBlur isOpen>
+        <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 24}}>
+          <Heading slot="title">{lander?.name} has won!!!</Heading>
+          <div>
+            Restarting in <TimerTill target={game.resetTimestamp!}/>s...
+          </div>
+        </div>
+      </Modal>
+    );
+  } else if (game.resetTimestamp) {
+    return (
+      <Modal modalBlur isOpen>
+        <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 24}}>
+          <Heading slot="title">Restarting in <TimerTill target={game.resetTimestamp}/>s...</Heading>
+          <div>
+            <Button onPress={() => engine.cancelResetGame()}>Cancel!</Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+  return null;
+})
+
 const ResetGameButton = observer(function ResetGameButton(props: {
   game: LanderGameState;
   engine: ClientLanderEngine;
 }) {
   const { game, engine } = props;
-  if (game.resetTimestamp) {
-    return (
-      <div style={{display: "flex", gap: 16, alignItems: "center"}}>
-        Restarting in <TimerTill target={game.resetTimestamp}/>s... <Button onPress={() => engine.cancelResetGame()}>Cancel!</Button>
-      </div>
-    )
-  } else {
+  if (!game.resetTimestamp) {
     return (
       <Button
         onPress={() => engine.resetGame()}
@@ -83,3 +113,28 @@ function TimerTill(props: { target: number }) {
   }, [target]);
   return secondsLeft;
 }
+
+const LeaderBoard = observer(function LeaderBoard(props: {
+  game: LanderGameState;
+  engine: ClientLanderEngine;
+}) {
+  const { game, engine } = props;
+  if (game.landers.length <= 1) {
+    return null;
+  }
+
+  const landers = sortBy(game.landers, l => -(game.playerWins[l.id] ?? 0)).slice(0, 5);
+  return (
+    <div className={sty.leaderBoard}>
+      <h3>Leaderboard</h3>
+      <ol>
+        {landers.map(lander => (
+          <li className={sty.leaderBoardItem} key={lander.id}>
+            <span>{lander.name}</span>
+            <span>{game.playerWins[lander.id] ?? 0}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+});

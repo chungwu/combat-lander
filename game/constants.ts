@@ -1,12 +1,26 @@
+import { degreesToRadians } from "@/utils/math";
 import { amberDark, blueDark, bronzeDark, crimsonDark, cyanDark, grassDark, greenDark, indigoDark, irisDark, jadeDark, limeDark, mintDark, orangeDark, pinkDark, plumDark, purpleDark, rubyDark, skyDark, tealDark, violetDark, yellowDark } from "@radix-ui/colors"
 
 // Game mechanics
 export const RESET_GAME_WAIT = 5 // 5 seconds 
+export const WON_GAME_WAIT = 5 // 10 seconds 
 
 // Map mechanics
 export const WORLD_WIDTH = 1000;
 export const WORLD_HEIGHT = 1000;
 export const GRAVITY = -40;
+
+export type LandingPadType = "long" | "short";
+export const LANDING_PAD_STATS = {
+  "long": {
+    multiplier: 2,
+    width: 60,
+  }, 
+  "short": {
+    multiplier: 4,
+    width: 30,
+  }
+} as const;
 
 
 // Lander mechanics
@@ -14,6 +28,11 @@ export const LANDER_RADIUS = 10;
 export const TURN_RATE = 1; // rad/s
 export const THROTTLE_RATE = 1; // rad/s
 export const FULL_THROTTLE_FORCE = 40000;
+
+export const LANDING_INDICATOR_THRESHOLD = 200;
+export const LANDING_SAFE_ROTATION = degreesToRadians(5); // 5 degrees
+export const LANDING_SAFE_VX = 10;
+export const LANDING_SAFE_VY = 20;
 
 export const LANDER_COLORS_MAP = {
   "ruby": rubyDark,

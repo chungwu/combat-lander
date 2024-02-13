@@ -1,15 +1,21 @@
-import Rapier, { ActiveCollisionTypes, ActiveEvents, Collider, World } from "@dimforge/rapier2d";
-import { LanderGameState } from "../game-state";
+import Rapier, { Collider, World } from "@dimforge/rapier2d";
+import flatten from "lodash/flatten";
+import { Moon } from "../map";
 import { GameObject } from "./game-object";
 
 export class Ground extends GameObject {
-  static create(game: LanderGameState) {
-    const body = game.world.createRigidBody(Rapier.RigidBodyDesc.fixed().setTranslation(0, 0));
-    const colliderDesc = Rapier.ColliderDesc.polyline(new Float32Array(game.moon.vertices));
-    const collider = game.world.createCollider(
+  static create(world: World, moon: Moon) {
+    const body = world.createRigidBody(Rapier.RigidBodyDesc.fixed().setTranslation(0, 0));
+    const colliderDesc = Rapier.ColliderDesc.polyline(new Float32Array(flatten(moon.vertices)));
+    const collider = world.createCollider(
       colliderDesc,
       body
     );
+    return new Ground(collider);
+  }
+
+  static createFrom(world: World, payload: ReturnType<typeof Ground.prototype.serialize>) {
+    const collider = world.getCollider(payload.handle);
     return new Ground(collider);
   }
 

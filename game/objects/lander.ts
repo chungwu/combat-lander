@@ -48,7 +48,9 @@ export class Lander extends GameObject {
 
   static createFrom(world: World, opts: ReturnType<typeof Lander.prototype.serialize>) {
     const collider = world.getCollider(opts.handle);
-    return new Lander(collider, { id: opts.id, name: opts.name, color: opts.color });
+    const lander = new Lander(collider, { id: opts.id, name: opts.name, color: opts.color });
+    lander.mergeFrom(world, opts);
+    return lander;
   }
 
   constructor(collider: Collider, opts: LanderOpts) {

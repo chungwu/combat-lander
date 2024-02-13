@@ -22,7 +22,8 @@ addExtension({
       worldWidth: moon.worldWidth,
       worldHeight: moon.worldHeight,
       vertices: moon.vertices,
-      gravity: moon.gravity
+      gravity: moon.gravity,
+      landingPads: moon.landingPads,
     }
   },
   read(data) {
@@ -30,7 +31,8 @@ addExtension({
       data.worldWidth,
       data.worldHeight,
       data.vertices,
-      data.gravity
+      data.gravity,
+      data.landingPads,
     );
   }
 });

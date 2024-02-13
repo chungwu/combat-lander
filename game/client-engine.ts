@@ -46,6 +46,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
         gameId: this.game.id,
         event
       } as const;
+      console.log(`[${this.timestep}] LOCAL EVENT`, msg);
       this.savePlayerEvent(msg);
       this.sendMessage(msg);
     }
