@@ -5,7 +5,7 @@ import { EventQueue, Vector2, World } from "@dimforge/rapier2d";
 import assert from "assert";
 import pull from "lodash/pull";
 import { makeObservable, observable } from "mobx";
-import { LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, ROCKET_IMPULSE } from "./constants";
+import { CONTACT_DAMAGE_FACTOR, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, ROCKET_IMPULSE } from "./constants";
 import { Moon, generateRandomMap } from "./map";
 import { Ground } from "./objects/ground";
 import { Lander } from "./objects/lander";
@@ -96,13 +96,13 @@ export class LanderGameState {
           return;
         }
         if (obj instanceof Ground) {
-          lander.takeDamage(force * dt * 2)
+          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.ground)
         } else if (obj instanceof Sky) {
-          lander.takeDamage(force * dt * 0.1)
+          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.sky)
         } else if (obj instanceof Rocket) {
-          lander.takeDamage(force * dt * 0.5)
+          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.rocket)
         } else if (obj instanceof Lander) {
-          lander.takeDamage(force * dt * 1)
+          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.lander)
         }
       };
 

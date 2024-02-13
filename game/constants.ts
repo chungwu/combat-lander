@@ -29,10 +29,17 @@ export const TURN_RATE = 1; // rad/s
 export const THROTTLE_RATE = 1; // rad/s
 export const FULL_THROTTLE_FORCE = 40000;
 
-export const LANDING_INDICATOR_THRESHOLD = 200;
+export const LANDING_INDICATOR_THRESHOLD = 150;
 export const LANDING_SAFE_ROTATION = degreesToRadians(5); // 5 degrees
-export const LANDING_SAFE_VX = 10;
-export const LANDING_SAFE_VY = 20;
+export const LANDING_SAFE_VX = 5;
+export const LANDING_SAFE_VY = 10;
+
+export const CONTACT_DAMAGE_FACTOR = {
+  "ground": 3,
+  "sky": 0.1,
+  "rocket": 0.5,
+  "lander": 1
+} as const;
 
 export const LANDER_COLORS_MAP = {
   "ruby": rubyDark,

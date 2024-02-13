@@ -13,6 +13,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
   private shouldImmediatelyBroadcastSync = false;
   private viewerIds: string[] = [];
   private intervalId: any | undefined;
+  private lastSyncTimestep: number = 0;
 
   constructor(private room: Room) {
     const game = LanderGameState.createNew();
@@ -50,12 +51,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
         id: sender.id,
         name: msg.name
       });
-      this.broadcast({
-        type: "full",
-        payload: this.game.serializeFull(),
-        gameId: this.game.id,
-        time: this.timestep
-      });
+      this.broadcast(this.makeFullMessage());
     } else if (msg.type === "input") {
       this.savePlayerEvent(msg);
       
@@ -138,10 +134,12 @@ export class ServerLanderEngine extends BaseLanderEngine {
     if (!this.game.winnerPlayerId) {
       // if any lander has successfully landed, that lander wins
       for (const lander of this.game.landers) {
-        const pad = this.game.isSafelyLanded(lander);
-        if (pad) {
-          this.game.winnerPlayerId = lander.id;
-          this.game.addWins(lander.id, LANDING_PAD_STATS[pad.type].multiplier);
+        if (lander.isAlive()) {
+          const pad = this.game.isSafelyLanded(lander);
+          if (pad) {
+            this.game.winnerPlayerId = lander.id;
+            this.game.addWins(lander.id, LANDING_PAD_STATS[pad.type].multiplier);
+          }
         }
       }
 
@@ -187,11 +185,18 @@ export class ServerLanderEngine extends BaseLanderEngine {
 
   private broadcast(msg: ServerMessage) {
     this.room.broadcast(PACKR.pack(msg));
+    if (msg.type === "partial" || msg.type === "full") {
+      this.lastSyncTimestep = this.timestep;
+    }
   }
 
   protected applyPlayerInput(playerId: string, event: GameInputEvent): void {
     super.applyPlayerInput(playerId, event);
     if (event.type === "fire-rocket") {
+      this.shouldImmediatelyBroadcastSync = true;
+    }
+    if (this.timestep < this.lastSyncTimestep) {
+      console.log(`[${this.timestep}] Applied user input from before last sync! Immediately correct history`);
       this.shouldImmediatelyBroadcastSync = true;
     }
   }

@@ -1,6 +1,10 @@
 import { ClientLanderEngine } from "./client-engine";
 
 export class KeyboardController {
+  private pressingUp = false;
+  private pressingDown = false;
+  private pressingLeft = false;
+  private pressingRight = false;
   constructor(private engine: ClientLanderEngine) {
 
   }
@@ -29,19 +33,24 @@ export class KeyboardController {
 
     const arrowKey = this.deriveArrowKeyDirection(event.key);
     if (arrowKey && lander.isAlive()) {
-      if (arrowKey === "up" && !lander.thrustingUp && lander.throttle < 1) {
+      console.log("KEY DOWN", arrowKey);
+      if (arrowKey === "up" && !this.pressingDown) {
+        this.pressingDown = true;
         this.engine.processLocalInput({
           type: "thrust", dir: "up", active: true
         });
-      } else if (arrowKey === "down" && !lander.thrustingDown && lander.throttle > 0) {
+      } else if (arrowKey === "down" && !this.pressingUp) {
+        this.pressingUp = true;
         this.engine.processLocalInput({
           type: "thrust", dir: "down", active: true
         });
-      } else if (arrowKey === "left" && !lander.rotatingLeft) {
+      } else if (arrowKey === "left" && !this.pressingLeft) {
+        this.pressingLeft = true;
         this.engine.processLocalInput({
           type: "rotate", dir: "left", active: true
         });
-      } else if (arrowKey === "right" && !lander.rotatingRight) {
+      } else if (arrowKey === "right" && !this.pressingRight) {
+        this.pressingRight = true;
         this.engine.processLocalInput({
           type: "rotate", dir: "right", active: true
         });
@@ -56,19 +65,24 @@ export class KeyboardController {
     }
     const arrowKey = this.deriveArrowKeyDirection(event.key);
     if (arrowKey && lander.isAlive()) {
-      if (arrowKey === "up" && lander.thrustingUp) {
+      console.log("KEY UP", arrowKey);
+      if (arrowKey === "up" && this.pressingDown) {
+        this.pressingDown = false;
         this.engine.processLocalInput({
           type: "thrust", dir: "up", active: false
         });
-      } else if (arrowKey === "down" && lander.thrustingDown) {
+      } else if (arrowKey === "down" && this.pressingUp) {
+        this.pressingUp = false;
         this.engine.processLocalInput({
           type: "thrust", dir: "down", active: false
         });
-      } else if (arrowKey === "left" && lander.rotatingLeft) {
+      } else if (arrowKey === "left" && this.pressingLeft) {
+        this.pressingLeft = false;
         this.engine.processLocalInput({
           type: "rotate", dir: "left", active: false
         });
-      } else if (arrowKey === "right" && lander.rotatingRight) {
+      } else if (arrowKey === "right" && this.pressingRight) {
+        this.pressingRight = false;
         this.engine.processLocalInput({
           type: "rotate", dir: "right", active: false
         });

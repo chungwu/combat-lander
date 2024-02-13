@@ -130,6 +130,7 @@ export class Lander extends GameObject {
     if (this.thrustingUp || this.thrustingDown) {
       let target = this.throttle + THROTTLE_RATE * dt * (this.thrustingUp ? 1 : -1);
       target = Math.max(0, Math.min(1.0, target));
+      console.log(`SET THROTTLE ${this.throttle} to ${target}, up ${this.thrustingUp} down ${this.thrustingDown}`)
       this.throttle = target;
     }
 
@@ -150,6 +151,7 @@ export class Lander extends GameObject {
       const sign = ((rotation > targetRotation && rotation - targetRotation < Math.PI) || (rotation < targetRotation && targetRotation
 				- rotation > Math.PI)) ? -1.0 : 1.0;
       const newRotation = normalizeAngle(rotation + sign * delta);
+      console.log(`SET ROTATION ${this.rotation} to ${newRotation}, left ${this.rotatingLeft}, right ${this.rotatingRight}`)
       this.body.setRotation(newRotation, true);
     }
   }

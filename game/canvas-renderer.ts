@@ -11,7 +11,7 @@ import { Rocket } from "./rocket";
 import { Sky } from "./objects/sky";
 import { MONO } from "@/fonts";
 import { Moon } from "./map";
-import { greenDark, tomatoDark, yellowDark } from "@radix-ui/colors";
+import { grayDark, greenDark, tomatoDark, yellowDark } from "@radix-ui/colors";
 import { LandingPad } from "./objects/landing-pad";
 import { radianToDegrees, vectorDistance } from "@/utils/math";
 import { ensure, ensureInstance } from "@/utils/utils";
@@ -64,31 +64,41 @@ export class CanvasRenderer {
     return this.renderer.view as HTMLCanvasElement;
   }
 
+  private clearContainer(container: Container) {
+    for (const child of this.screenRoot.children) {
+      child.destroy();
+    }
+    container.removeChildren();
+  }
+
   private reset() {
-    this.screenRoot.removeChildren();
-    this.viewport.removeChildren();
+    this.clearContainer(this.screenRoot);
+    this.clearContainer(this.viewport);
     this.handle2gfx.clear();
     this.handle2label.clear();
   }
 
-  private updateLegend() {
+  private updateLegend(game: LanderGameState) {
     let legend = this.screenRoot.getChildByName("legend");
     if (!legend) {
       legend = new Container();
       legend.name = "legend";
       this.screenRoot.addChild(legend);
+      for (let i=0; i<1000; i+= 100) {
+        const text = new Text(`${game.moon.worldHeight - i}`, {
+          fill: "#FFFFFF",
+          fontSize: 12,
+          fontFamily: MONO.style.fontFamily
+        });
+        text.x = 10; 
+        text.y = this.viewport.toScreen(0, i).y;
+        (legend as Container).addChild(text);
+      }
     }
     assert(legend instanceof Container);
-    legend.removeChildren();
-    for (let i=0; i<1000; i+= 100) {
-      const text = new Text(`${i}`, {
-        fill: "#FFFFFF",
-        fontSize: 12,
-        fontFamily: MONO.style.fontFamily
-      });
-      text.x = 10; 
-      text.y = this.viewport.toScreen(0, i).y;
-      legend.addChild(text);
+    for (let i=0; i<10; i++) {
+      const child = ensureInstance(legend.getChildAt(i), Text);
+      child.y = this.viewport.toScreen(0, i * 100).y;
     }
   }
 
@@ -179,7 +189,7 @@ export class CanvasRenderer {
       }
     }
 
-    this.updateLegend();
+    this.updateLegend(game);
 
     this.renderer.render(this.root);
   }
@@ -233,27 +243,37 @@ export class CanvasRenderer {
   }
 
   private createObjectGraphics(object: GameObject) {
-    if (object instanceof Lander) {
-      return this.createLanderGraphics(object);
-    } else if (object instanceof Ground) {
-      return this.createGroundGraphics(object);
-    } else if (object instanceof Sky) {
-      return this.createSkyGraphics(object);
-    } else if (object instanceof Rocket) {
-      return this.createRocketGraphics(object);
-    } else if (object instanceof LandingPad) {
-      return this.createLandingPadGraphics(object);
-    } else {
-      throw new Error(`Unknown game object ${object}`);
-    }
+    const gfx = (() => {
+      if (object instanceof Lander) {
+        return this.createLanderGraphics(object);
+      } else if (object instanceof Ground) {
+        return this.createGroundGraphics(object);
+      } else if (object instanceof Sky) {
+        return this.createSkyGraphics(object);
+      } else if (object instanceof Rocket) {
+        return this.createRocketGraphics(object);
+      } else if (object instanceof LandingPad) {
+        return this.createLandingPadGraphics(object);
+      } else {
+        throw new Error(`Unknown game object ${object}`);
+      }
+    })();
+    this.viewport.addChild(gfx);
+    return gfx;
   }
 
   private createObjectLabel(object: GameObject) {
-    if (object instanceof Lander) {
-      return this.createLanderLabel(object);
-    } else {
-      return undefined;
+    const gfx = (() => {
+      if (object instanceof Lander) {
+        return this.createLanderLabel(object);
+      } else {
+        return undefined;
+      }
+    })();
+    if (gfx) {
+      this.screenRoot.addChild(gfx);
     }
+    return gfx;
   }
 
   private updateObjectGraphics(object: GameObject, gfx: Graphics | Container) {
@@ -316,7 +336,6 @@ export class CanvasRenderer {
     if (distance < LANDING_INDICATOR_THRESHOLD && lander.id === playerId) {
       landingIndicator.visible = true;
       landerHealth.visible = false;
-      landingIndicator.removeChildren();
 
       const angle = Math.abs(radianToDegrees(lander.rotation));
       const vx = Math.abs(lander.body.linvel().x);
@@ -324,29 +343,18 @@ export class CanvasRenderer {
 
       const safeColor = greenDark.green10;
       const dangerColor = tomatoDark.tomato10;
-      const angleText = new Text(`Angle: ${angle.toFixed(2)}°`, {
-        fontSize: "10px",
-        fontFamily: MONO.style.fontFamily,
-        fill: Math.abs(lander.rotation) > LANDING_SAFE_ROTATION ? dangerColor : safeColor
-      });
-      landingIndicator.addChild(angleText);
 
-      const vxText = new Text(`Speed X: ${vx.toFixed(2)}`, {
-        fontSize: "10px",
-        fontFamily: MONO.style.fontFamily,
-        fill: vx > LANDING_SAFE_VX ? dangerColor : safeColor
-      });
-      vxText.position.y = angleText.height;
-      landingIndicator.addChild(vxText);
+      const angleText = ensureInstance(landingIndicator.getChildAt(0), Text); 
+      angleText.text = `Angle: ${angle.toFixed(2)}°`
+      angleText.style.fill = Math.abs(lander.rotation) > LANDING_SAFE_ROTATION ? dangerColor : safeColor;
 
-      const vyText = new Text(`Speed Y: ${vy.toFixed(2)}`, {
-        fontSize: "10px",
-        fontFamily: MONO.style.fontFamily,
-        fill: vy > LANDING_SAFE_VY ? dangerColor : safeColor
-      });
-      vyText.position.y = angleText.height + vxText.height;
-      landingIndicator.addChild(vyText);
-      landingIndicator.position.y = -lander.radius - vxText.height - vyText.height - angleText.height - 5;
+      const vxText = ensureInstance(landingIndicator.getChildAt(1), Text);
+      vxText.text = `Speed X: ${vx.toFixed(2)}`;
+      vxText.style.fill = vx > LANDING_SAFE_VX ? dangerColor : safeColor;
+
+      const vyText = ensureInstance(landingIndicator.getChildAt(2), Text);
+      vyText.text = `Speed Y: ${vy.toFixed(2)}`;
+      vyText.style.fill = vy > LANDING_SAFE_VY ? dangerColor : safeColor;
     } else {
       landingIndicator.visible = false;
       landerHealth.visible = true;
@@ -367,10 +375,17 @@ export class CanvasRenderer {
     const LANDER_LENGTH = length;
 
     const shuttle = new Graphics();
-    shuttle.lineStyle(1, getLanderColor(lander.color, 9));
-    drawSegments(shuttle, SHUTTLE_COCKPIT, LANDER_LENGTH);
-    shuttle.lineStyle(1, getLanderColor(lander.color, 9));
-    drawSegments(shuttle, SHUTTLE_SEGMENTS, LANDER_LENGTH);
+    shuttle.lineStyle(2, getLanderColor(lander.color, 10));
+    drawPolyline(shuttle, SHUTTLE_SHAPES.cockpit, LANDER_LENGTH);
+    shuttle.lineStyle(1, grayDark.gray10);
+    drawSegments(shuttle, [
+      SHUTTLE_SHAPES.middle,
+      SHUTTLE_SHAPES.booster,
+      SHUTTLE_SHAPES.leftLeg,
+      SHUTTLE_SHAPES.rightLeg,
+      SHUTTLE_SHAPES.leftFoot,
+      SHUTTLE_SHAPES.rightFoot,
+    ], LANDER_LENGTH);
 
     const flame = new Graphics();
     flame.name = "flame";
@@ -378,7 +393,6 @@ export class CanvasRenderer {
     container.addChild(flame);
     container.addChild(shuttle);
 
-    this.viewport.addChild(container);
     return container;
   }
 
@@ -406,11 +420,32 @@ export class CanvasRenderer {
 
     const landingIndicator = new Container();
     landingIndicator.name = "landingIndicator";
+
+    const textHeight = 10;
+    const angleText = new Text(``, {
+      fontSize: `${textHeight}px`,
+      fontFamily: MONO.style.fontFamily,
+    });
+    landingIndicator.addChild(angleText);
+
+    const vxText = new Text(``, {
+      fontSize: `${textHeight}px`,
+      fontFamily: MONO.style.fontFamily,
+    });
+    vxText.position.y = textHeight;
+    landingIndicator.addChild(vxText);
+
+    const vyText = new Text(``, {
+      fontSize: `${textHeight}px`,
+      fontFamily: MONO.style.fontFamily,
+    });
+    vyText.position.y = textHeight + textHeight
+    landingIndicator.addChild(vyText);
+
     landingIndicator.position.x = -lander.radius - 10;
-    landingIndicator.position.y = -lander.radius - 10;
+    landingIndicator.position.y = -lander.radius - (textHeight * 3) - 5;
     container.addChild(landingIndicator);
 
-    this.screenRoot.addChild(container);
     return container;
   }
 
@@ -426,7 +461,6 @@ export class CanvasRenderer {
     for (let i=2; i<vertices.length; i+= 2) {
       gfx.lineTo(vertices[i], -vertices[i+1]);
     }
-    this.viewport.addChild(gfx);
     return gfx;
   }
 
@@ -439,7 +473,6 @@ export class CanvasRenderer {
     for (let i=2; i<vertices.length; i+= 2) {
       gfx.lineTo(vertices[i], -vertices[i+1]);
     }
-    this.viewport.addChild(gfx);
     return gfx;
   }
 
@@ -455,7 +488,6 @@ export class CanvasRenderer {
       [-shape.halfExtents.x, shape.halfExtents.y],
       [-shape.halfExtents.x, -shape.halfExtents.y],
     ]])
-    this.viewport.addChild(gfx);
     return gfx;
   }
 
@@ -464,30 +496,29 @@ export class CanvasRenderer {
     gfx.lineStyle(2, yellowDark.yellow10);
     gfx.moveTo(0, 0);
     gfx.lineTo(LANDING_PAD_STATS[pad.type].width, 0);
-    this.viewport.addChild(gfx);
     return gfx;
   }
 }
 
-function drawSegments(gfx: Graphics, segments: [number, number][][], scale: number = 1) {
+function drawSegments(gfx: Graphics, segments: (readonly (readonly [number, number])[])[], scale: number = 1) {
   for (const section of segments) {
-    let first = true;
-    for (const vertex of section) {
-      if (first) {
-        gfx.moveTo(vertex[0] * scale, vertex[1] * scale);
-        first = false;
-      } else {
-        gfx.lineTo(vertex[0] * scale, vertex[1] * scale);
-      }
-    }
+    drawPolyline(gfx, section, scale);
+  }
+}
+
+function drawPolyline(gfx: Graphics, vertices: readonly (readonly [number, number])[], scale: number = 1) {
+  if (vertices.length >= 2) {
+    gfx.moveTo(vertices[0][0] * scale, vertices[0][1] * scale);
+  }
+  for (let i=1; i<vertices.length; i++) {
+    gfx.lineTo(vertices[i][0] * scale, vertices[i][1] * scale);
   }
 }
 
 export default CanvasRenderer;
 
-const SHUTTLE_COCKPIT: [number, number][][] = [
-  // cockpit
-  [
+const SHUTTLE_SHAPES = {
+  cockpit: [
     [-.37, 0],
     [-.43, -.12],
     [-.38, -.3],
@@ -499,45 +530,34 @@ const SHUTTLE_COCKPIT: [number, number][][] = [
     [.43, -.12],
     [.37, 0]
   ],
-]
-
-const SHUTTLE_SEGMENTS: [number, number][][] = [
-  
-  // Middle section
-  [
+  middle: [
     [-.45, 0],
     [.45, 0],
     [.45, .2],
     [-.45, .2],
     [-.45, 0]
   ],
-
-  // Booster
-  [
+  booster: [
     [-.2, .2],
     [-.3, .45],
     [.3, .45],
     [.2, .2],
     [-.2, .2],
   ],
-
-  // Legs
-  [ 
+  rightLeg: [
     [.35, .2],
     [.45, .5],
   ],
-  [ 
+  leftLeg: [
     [-.35, .2],
     [-.45, .5],
   ],
-
-  // Feet
-  [
+  rightFoot: [
     [.5, .5],
     [.4, .5],
   ],
-  [ 
+  leftFoot: [
     [-.5, .5],
     [-.4, .5],
   ]
-];
+} as const;

@@ -17,9 +17,11 @@
   position: absolute;
   top: 24px;
   left: 24px;
+  padding: 16px;
+  border: 1px solid var(--control-border);
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(2px);
 }
 
 .leaderBoardItem {
