@@ -9,10 +9,10 @@ export interface PseudoKeyboardEvent {
 export type KeyEventListener = (event: PseudoKeyboardEvent) => void;
 
 export class KeyboardController {
-  private pressingUp = false;
-  private pressingDown = false;
-  private pressingLeft = false;
-  private pressingRight = false;
+  pressingUp = false;
+  pressingDown = false;
+  pressingLeft = false;
+  pressingRight = false;
   private listeners: KeyEventListener[] = [];
   constructor(private engine: ClientLanderEngine) {
 
@@ -38,6 +38,12 @@ export class KeyboardController {
     } else if (event.type === "keypress") {
       this.handleKeyPress(event);
     }
+  }
+
+  handleJoystick(x: number, y: number) {
+    this.engine.processLocalInput({
+      type: "joystick", x, y
+    });
   }
 
   addListener(listener: KeyEventListener) {
@@ -159,13 +165,5 @@ export class KeyboardController {
       return key.replace("Arrow", "").toLowerCase() as "up" | "down" | "right" | "left";
     }
     return undefined;
-  }
-}
-
-export function generateGameInputEvent(engine: ClientLanderEngine, event: KeyboardEvent) {
-  if (event.type === "keyup") {
-
-  } else if (event.type === "keydown") {
-
   }
 }

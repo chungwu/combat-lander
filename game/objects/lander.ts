@@ -1,12 +1,12 @@
 import Rapier, { ActiveCollisionTypes, ActiveEvents, Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
 import { LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
-import { FULL_THROTTLE_FORCE, LANDER_RADIUS, LanderColor, ROCKET_STATS, ROTATE_FUEL_BURN_RATE, RocketType, THROTTLE_FUEL_BURN_RATE, THROTTLE_RATE, TURN_RATE } from "../constants";
-import { normalizeAngle, rotateVector } from "@/utils/math";
+import { FULL_THROTTLE_FORCE, JOYSTICK_CONFIG, LANDER_RADIUS, LanderColor, ROCKET_STATS, ROTATE_FUEL_BURN_RATE, RocketType, THROTTLE_FUEL_BURN_RATE, THROTTLE_RATE, TURN_RATE } from "../constants";
+import { normalizeAngle, rotateVector, vectorMagnitude } from "@/utils/math";
 import pick from "lodash/pick";
 import { GameInputEvent } from "@/messages";
 import assert from "assert";
-import { makeObservable, observable } from "mobx";
+import { action, makeObservable, observable } from "mobx";
 
 interface LanderOpts {
   id: string;
@@ -18,7 +18,8 @@ const SERIALIZED_FIELDS = [
   "id", 
   "name", 
   "color",
-  "throttle", "targetRotation", "health", "fuel", 
+  "throttle", "targetRotation", "joystickTarget", 
+  "health", "fuel", 
   "rotatingLeft", "rotatingRight", "thrustingUp", "thrustingDown",
   "rocketState",
 ] as const;
@@ -29,6 +30,10 @@ export class Lander extends GameObject {
   public name: string;
   public color: LanderColor;
   public throttle: number = 0;
+  public joystickTarget: {
+    throttle: number;
+    rotation: number | null;
+  } | undefined = undefined;
   public targetRotation: number | null = null;
   public health: number = 100;
   public fuel: number = 100;
@@ -110,6 +115,38 @@ export class Lander extends GameObject {
         } else if (event.dir === "right") {
           this.rotatingRight = event.active;
         }
+      } else if (event.type === "joystick") {
+        const actionThreshold = JOYSTICK_CONFIG.threshold;
+        const normed = (val: number) => {
+          if (Math.abs(val) < actionThreshold) {
+            return 0;
+          }
+          let magnitude = (Math.abs(val) - actionThreshold) / (1 - actionThreshold);
+          magnitude = magnitude * (val > 0 ? 1 : -1);
+          return Math.round(magnitude * 10000) / 10000;
+        };
+
+        const normY = normed(event.y);
+        const normX = normed(event.x);
+
+        if (JOYSTICK_CONFIG.scheme === "mixed") {
+          this.throttle = Math.abs(normY);
+          
+          if (normX < 0) {
+            this.rotatingLeft = true;
+            this.rotatingRight = false;
+          } else if (normX > 0) {
+            this.rotatingRight = true;
+            this.rotatingLeft = false;
+          } else {
+            this.rotatingLeft = this.rotatingRight = false;
+          }
+        } else {
+          this.joystickTarget = {
+            rotation: Math.abs(event.x) > actionThreshold || Math.abs(event.y) > actionThreshold ? Math.atan2(-normX, normY) : null,
+            throttle: Math.abs(normY),
+          };
+        }
       }
     }
   }
@@ -123,6 +160,7 @@ export class Lander extends GameObject {
       this.targetRotation = null;
       this.rotatingLeft = false;
       this.rotatingRight = false;
+      this.joystickTarget = undefined;
     }
   }
 
@@ -145,6 +183,8 @@ export class Lander extends GameObject {
           target = 0;
         }
         this.targetRotation = normalizeAngle(target);
+      } else if (this.joystickTarget) {
+        this.targetRotation = this.joystickTarget.rotation;
       } else {
         this.targetRotation = null;
       }
@@ -153,6 +193,8 @@ export class Lander extends GameObject {
         let target = this.throttle + THROTTLE_RATE * dt * (this.thrustingUp ? 1 : -1);
         target = Math.max(0, Math.min(1.0, target));
         this.throttle = target;
+      } else if (this.joystickTarget) {
+        this.throttle = this.joystickTarget.throttle;
       }
   
       if (this.throttle !== 0) {

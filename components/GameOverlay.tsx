@@ -1,4 +1,4 @@
-import { ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
+import { JOYSTICK_CONFIG, ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
 import { PseudoKeyboardEvent } from "@/game/controls";
 import { Lander } from "@/game/objects/lander";
 import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp } from "@fortawesome/free-solid-svg-icons";
@@ -15,7 +15,8 @@ import { JoinGameDialog } from "./JoinGameDialog";
 import { Modal } from "./Modal";
 import { useClientEngine } from "./contexts";
 import { Button as BaseButton } from "react-aria-components";
-import { isTouchDevice } from "@/utils/utils";
+import { ensure, isTouchDevice } from "@/utils/utils";
+import { Joystick } from "react-joystick-component";
 
 export const GameOverlay = observer(function GameOverlay() {
   return (
@@ -187,7 +188,7 @@ const KeyboardControlsOverlay = observer(function KeyboardOverlay(props: {
     <div className={sty.keyboardControlsOverlay}>
       {engine.isPlaying && 
         <>
-          <ArrowKeysOverlay />
+          {JOYSTICK_CONFIG.use ? <JoystickOverlay /> : <ArrowKeysOverlay />}
           <WeaponControlsOverlay />
         </>
       }
@@ -318,6 +319,77 @@ const ArrowKeysOverlay = observer(function ArrowKeysOverlay(props: {
           <FontAwesomeIcon icon={faArrowRight} />
         </KeyboardKey>
       </div>
+    </div>
+  )
+});
+
+
+const JoystickOverlay = observer(function JoystickOverlay(props: {
+
+}) {
+  const engine = useClientEngine();
+  const controller = engine.controller;
+  return (
+    <div className={sty.joystickOverlay}>
+      <Joystick 
+        stickColor={getLanderColor(ensure(engine.selfLander).color, 8)}
+        move={event => {
+          if (JOYSTICK_CONFIG.scheme === "keyboard") {
+            if (event.x != null) {
+              if (event.x < -JOYSTICK_CONFIG.threshold) {
+                controller.handleKeyEvent({type: "keydown", key: "ArrowLeft"});
+                controller.handleKeyEvent({type: "keyup", key: "ArrowRight"});
+              } else if (event.x > JOYSTICK_CONFIG.threshold) {
+                controller.handleKeyEvent({type: "keydown", key: "ArrowRight"});
+                controller.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
+              } else {
+                if (controller.pressingLeft) {
+                  controller.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
+                } 
+                if (controller.pressingRight) {
+                  controller.handleKeyEvent({type: "keyup", key: "ArrowRight"});
+                }
+              }
+            }
+            if (event.y != null) {
+              if (event.y < -JOYSTICK_CONFIG.threshold) {
+                controller.handleKeyEvent({type: "keydown", key: "ArrowDown"});
+                controller.handleKeyEvent({type: "keyup", key: "ArrowUp"});
+              } else if (event.y > JOYSTICK_CONFIG.threshold) {
+                controller.handleKeyEvent({type: "keydown", key: "ArrowUp"});
+                controller.handleKeyEvent({type: "keyup", key: "ArrowDown"});
+              } else {
+                if (controller.pressingUp) {
+                  controller.handleKeyEvent({type: "keyup", key: "ArrowUp"});
+                }
+                if (controller.pressingDown) {
+                  controller.handleKeyEvent({type: "keyup", key: "ArrowDown"});
+                }
+              }
+            }
+          } else {
+            controller.handleJoystick(event.x ?? 0, event.y ?? 0);
+          }
+        }} 
+        stop={event => {
+          if (JOYSTICK_CONFIG.scheme === "keyboard") {
+            if (controller.pressingUp) {
+              controller.handleKeyEvent({type: "keyup", key: "ArrowUp"});
+            }
+            if (controller.pressingDown) {
+              controller.handleKeyEvent({type: "keyup", key: "ArrowDown"});
+            }
+            if (controller.pressingLeft) {
+              controller.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
+            }
+            if (controller.pressingRight) {
+              controller.handleKeyEvent({type: "keyup", key: "ArrowRight"});
+            }
+          } else {
+            controller.handleJoystick(0, 0);
+          }
+        }}
+      />
     </div>
   )
 });

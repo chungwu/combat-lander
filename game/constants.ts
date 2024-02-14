@@ -104,3 +104,9 @@ export const SERVER_SNAPSHOT_FREQ = 10; // save snapshot every 10 steps
 
 export const CLIENT_SNAPSHOT_GC_FREQ = 60 * 60; // gc every minute
 export const CLIENT_SNAPSHOT_FREQ = 1; // save every snapshot
+
+export const JOYSTICK_CONFIG: {use: boolean, scheme: "keyboard" | "angled" | "mixed", threshold: number} = {
+  use: false,
+  scheme: "angled",
+  threshold: 0.2
+};

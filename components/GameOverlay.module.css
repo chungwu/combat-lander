@@ -105,6 +105,18 @@
   right: 24px;
 }
 
+.joystickOverlay {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+}
+
+.joystickOverlay [data-testid="joystick-base"] {
+  background-color: transparent !important;
+  border: 1px solid var(--control-border);
+  backdrop-filter: blur(8px);
+}
+
 .keyboardControlsOverlay {
   position: absolute;
   bottom: 0;

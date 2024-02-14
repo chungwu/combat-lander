@@ -3,14 +3,20 @@ import { GameCanvas } from "./GameCanvas";
 import sty from "./Room.module.css";
 import { GameOverlay } from "./GameOverlay";
 import { ClientEngineProvider } from "./contexts";
+import { useRouter } from "next/router";
+import { JOYSTICK_CONFIG } from "@/game/constants";
 
 export function Room(props: {
   roomId: string
 }) {
   const { roomId } = props;
-  console.log("ROOM", roomId)
   const { game, engine } = useLanderSocket(roomId);
   (globalThis as any).game = game;
+  const flags = useRouter().query;
+  if (flags.joystick) {
+    JOYSTICK_CONFIG.use = true;
+    JOYSTICK_CONFIG.scheme = flags.joystick as any;
+  }
 
   return (
     <div className={sty.root}>
