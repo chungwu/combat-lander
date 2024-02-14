@@ -33,8 +33,8 @@ export const ROTATE_FUEL_BURN_RATE = 1;
 
 export const LANDING_INDICATOR_THRESHOLD = 150;
 export const LANDING_SAFE_ROTATION = degreesToRadians(5); // 5 degrees
-export const LANDING_SAFE_VX = 5;
-export const LANDING_SAFE_VY = 15;
+export const LANDING_SAFE_VX = 10;
+export const LANDING_SAFE_VY = 20;
 
 export const ROCKET_STATS = {
   "small": {
@@ -108,5 +108,5 @@ export const CLIENT_SNAPSHOT_FREQ = 1; // save every snapshot
 export const JOYSTICK_CONFIG: {use: boolean, scheme: "keyboard" | "angled" | "mixed", threshold: number} = {
   use: false,
   scheme: "angled",
-  threshold: 0.2
+  threshold: 0.1
 };

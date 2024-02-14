@@ -10,7 +10,7 @@ export default function App({ Component, pageProps }: AppProps) {
           font-family: ${MONO.style.fontFamily}
         }
       `}</style>
-      <div className="app dark">
+      <div className={`app dark ${MONO.variable}`}>
         <Component {...pageProps} />
       </div>
     </>

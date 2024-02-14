@@ -9,7 +9,7 @@ interface Message {
 export type GameInputEvent = 
   | { type: "thrust", dir: "up" | "down", active: boolean }
   | { type: "rotate", dir: "left" | "right", active: boolean }
-  | { type: "joystick", x: number, y: number }
+  | { type: "joystick", targetThrottle: number, targetRotation: number | null, rotatingLeft: boolean | null, rotatingRight: boolean | null }
   | { type: "fire-rocket", rocketType: RocketType }
 
 export interface JoinMessage extends Message {

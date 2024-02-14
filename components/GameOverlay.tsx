@@ -328,67 +328,21 @@ const JoystickOverlay = observer(function JoystickOverlay(props: {
 
 }) {
   const engine = useClientEngine();
+  const [ pos, setPos ] = React.useState<{x: number, y: number}|undefined>(undefined);
   const controller = engine.controller;
   return (
     <div className={sty.joystickOverlay}>
       <Joystick 
         stickColor={getLanderColor(ensure(engine.selfLander).color, 8)}
         move={event => {
-          if (JOYSTICK_CONFIG.scheme === "keyboard") {
-            if (event.x != null) {
-              if (event.x < -JOYSTICK_CONFIG.threshold) {
-                controller.handleKeyEvent({type: "keydown", key: "ArrowLeft"});
-                controller.handleKeyEvent({type: "keyup", key: "ArrowRight"});
-              } else if (event.x > JOYSTICK_CONFIG.threshold) {
-                controller.handleKeyEvent({type: "keydown", key: "ArrowRight"});
-                controller.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
-              } else {
-                if (controller.pressingLeft) {
-                  controller.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
-                } 
-                if (controller.pressingRight) {
-                  controller.handleKeyEvent({type: "keyup", key: "ArrowRight"});
-                }
-              }
-            }
-            if (event.y != null) {
-              if (event.y < -JOYSTICK_CONFIG.threshold) {
-                controller.handleKeyEvent({type: "keydown", key: "ArrowDown"});
-                controller.handleKeyEvent({type: "keyup", key: "ArrowUp"});
-              } else if (event.y > JOYSTICK_CONFIG.threshold) {
-                controller.handleKeyEvent({type: "keydown", key: "ArrowUp"});
-                controller.handleKeyEvent({type: "keyup", key: "ArrowDown"});
-              } else {
-                if (controller.pressingUp) {
-                  controller.handleKeyEvent({type: "keyup", key: "ArrowUp"});
-                }
-                if (controller.pressingDown) {
-                  controller.handleKeyEvent({type: "keyup", key: "ArrowDown"});
-                }
-              }
-            }
-          } else {
-            controller.handleJoystick(event.x ?? 0, event.y ?? 0);
-          }
+          controller.handleJoystickMove(event);
         }} 
+        pos={pos}
         stop={event => {
-          if (JOYSTICK_CONFIG.scheme === "keyboard") {
-            if (controller.pressingUp) {
-              controller.handleKeyEvent({type: "keyup", key: "ArrowUp"});
-            }
-            if (controller.pressingDown) {
-              controller.handleKeyEvent({type: "keyup", key: "ArrowDown"});
-            }
-            if (controller.pressingLeft) {
-              controller.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
-            }
-            if (controller.pressingRight) {
-              controller.handleKeyEvent({type: "keyup", key: "ArrowRight"});
-            }
-          } else {
-            controller.handleJoystick(0, 0);
-          }
+          const nextPos = controller.handleJoystickStop();
+          setPos(nextPos);
         }}
+        size={200}
       />
     </div>
   )

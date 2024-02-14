@@ -117,6 +117,10 @@
   backdrop-filter: blur(8px);
 }
 
+.joystickOverlay button {
+  opacity: 0.5;
+}
+
 .keyboardControlsOverlay {
   position: absolute;
   bottom: 0;

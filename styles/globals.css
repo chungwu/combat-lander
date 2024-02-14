@@ -8,6 +8,7 @@
 @import "@radix-ui/colors/tomato-dark.css";
 
 .app {
+  font-family: var(--font-mono);
   --text-color: var(--gray-12);
   --text-size: 16px;
   --text-size-large: 24px;
@@ -36,8 +37,6 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+html {
+  color-scheme: dark;
 }

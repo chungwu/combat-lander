@@ -1,5 +1,9 @@
-import { pull } from "lodash";
+import { clamp, pull } from "lodash";
 import { ClientLanderEngine } from "./client-engine";
+import { JOYSTICK_CONFIG } from "./constants";
+import { IJoystickUpdateEvent } from "react-joystick-component/build/lib/Joystick";
+import { normalizeAngle, vectorMagnitude } from "@/utils/math";
+import { Vector2 } from "@dimforge/rapier2d";
 
 export interface PseudoKeyboardEvent {
   type: "keyup" | "keydown" | "keypress";
@@ -13,6 +17,7 @@ export class KeyboardController {
   pressingDown = false;
   pressingLeft = false;
   pressingRight = false;
+  private joystickActive = false;
   private listeners: KeyEventListener[] = [];
   constructor(private engine: ClientLanderEngine) {
 
@@ -38,12 +43,6 @@ export class KeyboardController {
     } else if (event.type === "keypress") {
       this.handleKeyPress(event);
     }
-  }
-
-  handleJoystick(x: number, y: number) {
-    this.engine.processLocalInput({
-      type: "joystick", x, y
-    });
   }
 
   addListener(listener: KeyEventListener) {
@@ -165,5 +164,129 @@ export class KeyboardController {
       return key.replace("Arrow", "").toLowerCase() as "up" | "down" | "right" | "left";
     }
     return undefined;
+  }
+
+  handleJoystickMove(event: IJoystickUpdateEvent) {
+    const lander = this.engine.selfLander;
+    if (!lander) {
+      return;
+    }
+
+    if (JOYSTICK_CONFIG.scheme === "keyboard") {
+      if (event.x != null) {
+        if (event.x < -JOYSTICK_CONFIG.threshold) {
+          this.handleKeyEvent({type: "keydown", key: "ArrowLeft"});
+          this.handleKeyEvent({type: "keyup", key: "ArrowRight"});
+        } else if (event.x > JOYSTICK_CONFIG.threshold) {
+          this.handleKeyEvent({type: "keydown", key: "ArrowRight"});
+          this.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
+        } else {
+          if (this.pressingLeft) {
+            this.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
+          } 
+          if (this.pressingRight) {
+            this.handleKeyEvent({type: "keyup", key: "ArrowRight"});
+          }
+        }
+      }
+      if (event.y != null) {
+        if (event.y < -JOYSTICK_CONFIG.threshold) {
+          this.handleKeyEvent({type: "keydown", key: "ArrowDown"});
+          this.handleKeyEvent({type: "keyup", key: "ArrowUp"});
+        } else if (event.y > JOYSTICK_CONFIG.threshold) {
+          this.handleKeyEvent({type: "keydown", key: "ArrowUp"});
+          this.handleKeyEvent({type: "keyup", key: "ArrowDown"});
+        } else {
+          if (this.pressingUp) {
+            this.handleKeyEvent({type: "keyup", key: "ArrowUp"});
+          }
+          if (this.pressingDown) {
+            this.handleKeyEvent({type: "keyup", key: "ArrowDown"});
+          }
+        }
+      }
+    } else {
+      const normed = (val: number, actionThreshold: number=JOYSTICK_CONFIG.threshold) => {
+        if (Math.abs(val) < actionThreshold) {
+          return undefined;
+        }
+        let magnitude = (Math.abs(val) - actionThreshold) / (1 - actionThreshold);
+        magnitude = magnitude * (val > 0 ? 1 : -1);
+        return Math.round(magnitude * 10000) / 10000;
+      };
+      if (JOYSTICK_CONFIG.scheme === "mixed") {
+        const normY = normed(event.y!);
+        const normX = normed(event.x!);
+        if (normX == null && normY == null) {
+          return;
+        }
+        const targetThrottle = normY == null ? lander.throttle : normY < 0 ? 0 : normY;
+        this.engine.processLocalInput({
+          type: "joystick", 
+          targetThrottle,
+          targetRotation: null,
+          rotatingLeft: normX != null && normX < 0,
+          rotatingRight: normX != null && normX > 0
+        });
+        // return { x: event.x, y: event.y! };
+      } else if (JOYSTICK_CONFIG.scheme === "angled") {
+        const normY = normed(event.y!);
+        const normX = normed(event.x!, 0.01);
+        if (normX == null && normY == null) {
+          return;
+        }
+        let targetRotation = normalizeAngle(Math.atan2(normY ?? 0, normX ?? 0) - 0.5*Math.PI);
+        if (targetRotation) {
+          targetRotation = clamp(targetRotation, -0.5 * Math.PI, 0.5 * Math.PI);
+        }
+        const targetThrottle = (normY ?? 0) <= 0 ? 0 : vectorMagnitude(new Vector2(normX ?? 0, normY ?? 0));
+        this.engine.processLocalInput({
+          type: "joystick",
+          targetThrottle, targetRotation, rotatingLeft: null, rotatingRight: null
+        });
+      }
+    }
+  }
+
+  handleJoystickStop() {
+    const lander = this.engine.selfLander;
+    if (!lander) {
+      return;
+    }
+
+    if (JOYSTICK_CONFIG.scheme === "keyboard") {
+      if (this.pressingUp) {
+        this.handleKeyEvent({type: "keyup", key: "ArrowUp"});
+      }
+      if (this.pressingDown) {
+        this.handleKeyEvent({type: "keyup", key: "ArrowDown"});
+      }
+      if (this.pressingLeft) {
+        this.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
+      }
+      if (this.pressingRight) {
+        this.handleKeyEvent({type: "keyup", key: "ArrowRight"});
+      }
+    } else if (JOYSTICK_CONFIG.scheme === "mixed") {
+      this.engine.processLocalInput({
+        type: "joystick",
+        targetThrottle: lander.throttle,
+        rotatingLeft: false,
+        rotatingRight: false,
+        targetRotation: null
+      });
+      return {
+        x: 0,
+        y: lander.throttle === 0 ? 0 : lander.throttle * (1 - JOYSTICK_CONFIG.threshold) + JOYSTICK_CONFIG.threshold
+      }
+    } else if (JOYSTICK_CONFIG.scheme === "angled") {
+      this.engine.processLocalInput({
+        type: "joystick",
+        targetThrottle: 0,
+        rotatingLeft: false,
+        rotatingRight: false,
+        targetRotation: null
+      });
+    }
   }
 }

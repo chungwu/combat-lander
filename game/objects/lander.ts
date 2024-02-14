@@ -116,37 +116,17 @@ export class Lander extends GameObject {
           this.rotatingRight = event.active;
         }
       } else if (event.type === "joystick") {
-        const actionThreshold = JOYSTICK_CONFIG.threshold;
-        const normed = (val: number) => {
-          if (Math.abs(val) < actionThreshold) {
-            return 0;
-          }
-          let magnitude = (Math.abs(val) - actionThreshold) / (1 - actionThreshold);
-          magnitude = magnitude * (val > 0 ? 1 : -1);
-          return Math.round(magnitude * 10000) / 10000;
-        };
-
-        const normY = normed(event.y);
-        const normX = normed(event.x);
-
-        if (JOYSTICK_CONFIG.scheme === "mixed") {
-          this.throttle = Math.abs(normY);
-          
-          if (normX < 0) {
-            this.rotatingLeft = true;
-            this.rotatingRight = false;
-          } else if (normX > 0) {
-            this.rotatingRight = true;
-            this.rotatingLeft = false;
-          } else {
-            this.rotatingLeft = this.rotatingRight = false;
-          }
-        } else {
-          this.joystickTarget = {
-            rotation: Math.abs(event.x) > actionThreshold || Math.abs(event.y) > actionThreshold ? Math.atan2(-normX, normY) : null,
-            throttle: Math.abs(normY),
-          };
+        console.log("JOYSTICK", event);
+        if (event.rotatingLeft != null) {
+          this.rotatingLeft = event.rotatingLeft;
         }
+        if (event.rotatingRight != null) {
+          this.rotatingRight = event.rotatingRight;
+        }
+        this.joystickTarget = {
+          throttle: event.targetThrottle,
+          rotation: event.targetRotation
+        };
       }
     }
   }
@@ -208,7 +188,7 @@ export class Lander extends GameObject {
         // Stop any previous rotation from forces
         this.body.setAngvel(0, true);
   
-        const targetRotation = this.targetRotation;
+        const targetRotation = normalizeAngle(this.targetRotation);
         let delta = Math.abs(targetRotation - rotation); 
         delta = Math.min(delta, TURN_RATE * dt);
         const sign = ((rotation > targetRotation && rotation - targetRotation < Math.PI) || (rotation < targetRotation && targetRotation

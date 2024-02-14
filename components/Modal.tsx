@@ -1,5 +1,6 @@
 import { ModalOverlay, Modal as BaseModal, Dialog } from "react-aria-components";
 import React from "react";
+import { MONO } from "@/fonts";
 
 export function Modal(props: {
   children?: React.ReactNode | ((ps: {close: () => void}) => React.ReactNode);
@@ -10,7 +11,7 @@ export function Modal(props: {
   const { children, underlayBlur, modalBlur, isOpen, ...rest } = props;
   return (
     <ModalOverlay 
-      className={"app dark"}
+      className={`app dark ${MONO.variable}`}
       isOpen={isOpen}
       style={{
         position: "fixed", 
