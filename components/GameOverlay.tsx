@@ -1,5 +1,9 @@
-import { ClientLanderEngine } from "@/game/client-engine";
-import { LanderGameState } from "@/game/game-state";
+import { ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
+import { PseudoKeyboardEvent } from "@/game/controls";
+import { Lander } from "@/game/objects/lander";
+import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import classNames from "classnames";
 import sortBy from "lodash/sortBy";
 import { reaction } from "mobx";
 import { observer } from "mobx-react-lite";
@@ -9,13 +13,9 @@ import { Button } from "./Button";
 import sty from "./GameOverlay.module.css";
 import { JoinGameDialog } from "./JoinGameDialog";
 import { Modal } from "./Modal";
-import classNames from "classnames";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { useClientEngine } from "./contexts";
-import { PseudoKeyboardEvent } from "@/game/controls";
-import { ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
-import { Lander } from "@/game/objects/lander";
+import { Button as BaseButton } from "react-aria-components";
+import { isTouchDevice } from "@/utils/utils";
 
 export const GameOverlay = observer(function GameOverlay() {
   return (
@@ -105,7 +105,7 @@ function TimerTill(props: { target: number }) {
   const [secondsLeft, setSecondsLeft] = React.useState(Math.ceil((target - new Date().getTime()) / 1000));
   React.useEffect(() => {
     const id = setInterval(() => {
-      const left = Math.ceil((target - new Date().getTime()) / 1000);
+      const left = Math.max(0, Math.ceil((target - new Date().getTime()) / 1000));
       if (left !== secondsLeft) {
         setSecondsLeft(left);
       }
@@ -376,17 +376,17 @@ const KeyboardKey = observer(function KeyboardKey(props: {
     }
   }, [controller, keyboardKey]);
   return (
-    <button 
-      className={classNames(sty.key)} 
+    <BaseButton
+      className={classNames(sty.key, {[sty.keyTouchable]: isTouchDevice()})} 
       ref={buttonRef}
-      onClick={() => {
+      onPress={() => {
         controller.handleKeyEvent({type: "keypress", key: keyboardKey});
       }}
-      onMouseDown={() => {
+      onPressStart={() => {
         setPressed(true);
         controller.handleKeyEvent({type: "keydown", key: keyboardKey});
       }}
-      onMouseUp={() => {
+      onPressEnd={() => {
         setPressed(false)
         controller.handleKeyEvent({type: "keyup", key: keyboardKey});
       }}
@@ -395,6 +395,6 @@ const KeyboardKey = observer(function KeyboardKey(props: {
         [sty.keyBgPressed]: pressed
       })} ref={bgRef} />
       {children}
-    </button>
+    </BaseButton>
   );
 }, {forwardRef: true})

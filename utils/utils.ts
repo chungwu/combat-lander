@@ -18,3 +18,7 @@ export function isServer() {
 }
 
 export type ArrayElementType<T> = T extends (infer U)[] ? U : never;
+
+export function isTouchDevice() {
+  return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || ((navigator as any).msMaxTouchPoints > 0);
+}

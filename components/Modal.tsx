@@ -26,6 +26,7 @@ export function Modal(props: {
           padding: 32,
           border: "1px solid white",
           backdropFilter: modalBlur ? "blur(8px)" : undefined,
+          zIndex: 5,
         }}
       >
         <Dialog style={{outline: "none"}}>
