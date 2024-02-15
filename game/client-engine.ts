@@ -137,12 +137,21 @@ export class ClientLanderEngine extends BaseLanderEngine {
       // started from the snapshot we just created.
       this.restoreApplyReplay(msg.time, () => 0);
     } else {
-      this.restoreApplyReplay(
+      const success = this.restoreApplyReplay(
         msg.time,
         () => {
           this.game.mergePartial(msg.payload);
         }
       );
+      if (!success) {
+        // If we failed to apply a partial update, because we don't have a
+        // snapshot that's old enough, then request a full update
+        this.sendMessage({
+          type: "request-full",
+          time: this.timestep,
+          gameId: this.game.id
+        });
+      }
     }
   }
 

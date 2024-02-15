@@ -98,6 +98,8 @@ export class ServerLanderEngine extends BaseLanderEngine {
         time: this.timestep,
         gameId: this.game.id,
       });
+    } else if (msg.type === "request-full") {
+      this.send(sender, this.makeFullMessage());
     }
   }
 
@@ -107,7 +109,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
   }
 
   dispose() {
-    // this.game.world.free();
+    this.game.world.free();
   }
 
   private resetGame(gameOptions: GameOptions, resetOptions: ResetOptions) {
@@ -230,6 +232,10 @@ export class ServerLanderEngine extends BaseLanderEngine {
     if (msg.type === "partial" || msg.type === "full") {
       this.lastSyncTimestep = this.timestep;
     }
+  }
+
+  private send(conn: Connection, msg: ServerMessage) {
+    conn.send(PACKR.pack(msg));
   }
 
   protected applyPlayerInput(playerId: string, event: GameInputEvent): void {

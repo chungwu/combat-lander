@@ -42,7 +42,11 @@ export interface CancelResetGameMessage extends Message {
   type: "cancel-reset";
 }
 
-export type ClientMessage = JoinMessage | PlayerInputMessage | RequestResetGameMessage | CancelResetGameMessage | RequestStartGameMessage;
+export interface RequestFullSyncMessage extends Message {
+  type: "request-full";
+}
+
+export type ClientMessage = JoinMessage | PlayerInputMessage | RequestResetGameMessage | CancelResetGameMessage | RequestStartGameMessage | RequestFullSyncMessage;
 
 export interface InitMessage extends Message {
   type: "init";
