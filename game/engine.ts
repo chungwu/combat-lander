@@ -103,7 +103,7 @@ export class BaseLanderEngine {
   }
 
   protected restoreSnapshot(snapshot: GameSnapshot) {
-    console.log(`[${this.timestep}] Restoring to ${snapshot.time}`);
+    // console.log(`[${this.timestep}] Restoring to ${snapshot.time}`);
     this.game.mergeSnapshot(snapshot.snapshot);
     this.timestep = snapshot.time;
   }
@@ -114,10 +114,11 @@ export class BaseLanderEngine {
     }
     const snapshot = this.findClosestSnapshot(time);
     if (snapshot) {
-      console.log(`[${this.timestep}] FOUND closest ${snapshot.time}`);
+      // console.log(`[${this.timestep}] FOUND closest ${snapshot.time}`);
       this.restoreSnapshot(snapshot);
       return true;
     } else {
+      console.log(`[${this.timestep} FAILED to restore snapshot to ${time}]`);
       return false;
     }
   }

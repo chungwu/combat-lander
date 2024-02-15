@@ -64,7 +64,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
       if (msg.gameId !== this.game.id && msg.type !== "reset") {
         return;
       }
-      console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg, this.game.world);
+      console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg);
       if ((msg.type === "full" || msg.type === "partial") && !this.game.winnerPlayerId) {
         // msg.time should always be > this.lastSyncTimestep as we don't expect
         // to receive sync messages out of order. It is, however, possible to 
@@ -86,7 +86,13 @@ export class ClientLanderEngine extends BaseLanderEngine {
         }
         this.restoreApplyReplay(
           msg.time,
-          () => msg.type === "full" ? this.game.mergeFull(msg.payload) : this.game.mergePartial(msg.payload)
+          () => {
+            if (msg.type === "full") {
+              this.game.mergeFull(msg.payload);
+            } else {
+              this.game.mergePartial(msg.payload);
+            }
+          }
         );
         this.lastSyncTimestep = msg.time;
       } else if (msg.type === "input") {
