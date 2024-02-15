@@ -103,6 +103,16 @@ export class ServerLanderEngine extends BaseLanderEngine {
     }
   }
 
+  private getLastPlayerInputTimesteps() {
+    const record: Record<string, number[]> = {};
+    for (const lander of this.game.landers) {
+      const playerInputs = this.playerInputs.filter(x => x.playerId === lander.id && x.time <= this.timestep);
+      const lastPlayerInputs = playerInputs.slice(playerInputs.length - 100);
+      record[lander.id] = lastPlayerInputs.map(x => x.time);
+    }
+    return record;
+  }
+
   protected reset() {
     super.reset();
     this.resetTimestamp = undefined;
@@ -254,7 +264,8 @@ export class ServerLanderEngine extends BaseLanderEngine {
       type: "partial",
       time: this.timestep,
       gameId: this.game.id,
-      payload: this.game.serializePartial()
+      payload: this.game.serializePartial(),
+      lastPlayerInputTimesteps: this.getLastPlayerInputTimesteps(),
     } as const;
   }
 

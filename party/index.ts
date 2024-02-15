@@ -1,7 +1,7 @@
 import { PACKR } from "@/game/packr";
 import { ServerLanderEngine } from "@/game/server-engine";
 import { ClientMessage } from "@/messages";
-import { ensure } from "@/utils/utils";
+import { ensure, randomSleep } from "@/utils/utils";
 import type * as Party from "partykit/server";
 import { loadRapierWasm } from "./rapier-wasm";
 
@@ -42,7 +42,8 @@ export default class Server implements Party.Server {
     this.engine.onConnect(conn);
   }
 
-  onMessage(message: string | Uint8Array | Buffer, sender: Party.Connection) {
+  async onMessage(message: string | Uint8Array | Buffer, sender: Party.Connection) {
+    // await randomSleep(3000);
     const msg = this.unpackMessage(message);
     this.engine.handleMessage(sender, msg);
   }

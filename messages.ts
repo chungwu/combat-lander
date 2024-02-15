@@ -61,6 +61,7 @@ export interface FullSyncMessage extends Message {
 export interface PartialSyncMessage extends Message {
   type: "partial";
   payload: ReturnType<typeof LanderGameState.prototype.serializePartial>;
+  lastPlayerInputTimesteps: Record<string, number[]>;
 }
 
 export interface MetaSyncMessage extends Message {

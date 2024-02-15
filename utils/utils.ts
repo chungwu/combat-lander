@@ -30,3 +30,14 @@ export function isTouchDevice() {
 // We don't care that much about collision, so use a small,
 // easy to share alphabet
 export const makeShortId = customAlphabet('23456789abcdefghijkmnpqrstuvwxyz', 6);
+
+export function sleep(timeMs: number) {
+  return new Promise(resolve => {
+    setTimeout(resolve, timeMs);
+  })
+}
+
+export async function randomSleep(maxTimeMs: number) {
+  const time = Math.floor(Math.random() * maxTimeMs);
+  await sleep(time);
+}

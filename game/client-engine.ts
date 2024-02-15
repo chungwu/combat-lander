@@ -84,7 +84,6 @@ export class ClientLanderEngine extends BaseLanderEngine {
           this.replayTo(msg.time);
         }
         this.applySyncMessage(msg);
-        this.lastSyncTimestep = msg.time;
       } else if (msg.type === "input") {
         if (msg.playerId !== this.playerId) {
           // We can ignore player events from ourselves, as we've already applied
@@ -136,21 +135,47 @@ export class ClientLanderEngine extends BaseLanderEngine {
       // We restore and reply, but don't need to do a merge anymore, as we
       // started from the snapshot we just created.
       this.restoreApplyReplay(msg.time, () => 0);
+      this.lastSyncTimestep = msg.time;
     } else {
-      const success = this.restoreApplyReplay(
-        msg.time,
-        () => {
-          this.game.mergePartial(msg.payload);
+      const lastServerKnownTimesteps = msg.lastPlayerInputTimesteps[this.playerId] ?? [];
+      const oldestLastServerKnownTimestep = lastServerKnownTimesteps[0] ?? 0;
+      const unseenInputs = this.playerInputs.filter(x => x.playerId === this.playerId && x.time >= oldestLastServerKnownTimestep && x.time <= msg.time && !lastServerKnownTimesteps.includes(x.time));
+      if (unseenInputs.length > 0) {
+        // Suppose this sync message reflects the server's state at time 100.
+        // But we see that the server last saw an input from us at time 90, and that
+        // we have another input at time 95 that the server has not seen yet (due to
+        // network issues, etc). In that case, the server's idea of our location will
+        // differ from our own, and if we apply this sync, it will be very jarring.
+        // So instead, we will wait until we see a server's sync message that incorporates
+        // all known inputs from us.
+        //
+        // This is kind of dangerous as we may end up lagging significantly behind the
+        // server, if the server is consistently behind in processing our inputs. But the
+        // alternative is to have jarring effects where our lander would jump and and forth.
+        //
+        // Note also that we are only checking for ourself, not other players. This just
+        // makes it easier for this check to pass; it means other players may still "jump"
+        // and we ourselves may also still "jump" if we are in contact with other players.
+        // But, there's not much we can do there, as we also can't trust that we ourselves
+        // have an accurate view of the inputs from other players.
+        console.log(`[${this.timestep}] STALE partial sync! Server at ${msg.time} only saw [${lastServerKnownTimesteps.join(", ")}] since last sync, but we have [${unseenInputs.map(x => x.time).join(", ")}]`);
+      } else {
+        const success = this.restoreApplyReplay(
+          msg.time,
+          () => {
+            this.game.mergePartial(msg.payload);
+          }
+        );
+        if (!success) {
+          // If we failed to apply a partial update, because we don't have a
+          // snapshot that's old enough, then request a full update
+          this.sendMessage({
+            type: "request-full",
+            time: this.timestep,
+            gameId: this.game.id
+          });
         }
-      );
-      if (!success) {
-        // If we failed to apply a partial update, because we don't have a
-        // snapshot that's old enough, then request a full update
-        this.sendMessage({
-          type: "request-full",
-          time: this.timestep,
-          gameId: this.game.id
-        });
+        this.lastSyncTimestep = msg.time;
       }
     }
   }
