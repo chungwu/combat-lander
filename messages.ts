@@ -1,5 +1,5 @@
 import { RocketType } from "./game/constants";
-import type { LanderGameState } from "./game/game-state";
+import type { GameOptions, LanderGameState } from "./game/game-state";
 
 interface Message {
   time: number;
@@ -23,15 +23,26 @@ export interface PlayerInputMessage extends Message {
   event: GameInputEvent;
 }
 
+export interface ResetOptions {
+  preserveScores: boolean;
+  preserveMap: boolean;
+}
 export interface RequestResetGameMessage extends Message {
   type: "request-reset";
+  options: GameOptions;
+  resetOptions: ResetOptions;
+}
+export interface RequestStartGameMessage extends Message {
+  type: "request-start";
+  options: GameOptions;
+  name: string;
 }
 
 export interface CancelResetGameMessage extends Message {
   type: "cancel-reset";
 }
 
-export type ClientMessage = JoinMessage | PlayerInputMessage | RequestResetGameMessage | CancelResetGameMessage;
+export type ClientMessage = JoinMessage | PlayerInputMessage | RequestResetGameMessage | CancelResetGameMessage | RequestStartGameMessage;
 
 export interface InitMessage extends Message {
   type: "init";
@@ -53,6 +64,16 @@ export interface MetaSyncMessage extends Message {
   payload: ReturnType<typeof LanderGameState.prototype.serializeMeta>;
 }
 
+export interface ResetPendingMessage extends Message {
+  type: "reset-pending";
+  resetTimestamp: number;
+  cause: "dead" | "won" | "requested";
+}
+
+export interface ResetCancelledMessage extends Message {
+  type: "reset-cancelled";
+}
+
 export interface ResetGameMessage extends Message {
   type: "reset";
   paylod: FullSerializedGameState;
@@ -64,6 +85,8 @@ export type ServerMessage =
   | MetaSyncMessage
   | PartialSyncMessage
   | ResetGameMessage
-  | PlayerInputMessage;
+  | PlayerInputMessage
+  | ResetPendingMessage
+  | ResetCancelledMessage;
 
 export type FullSerializedGameState = ReturnType<typeof LanderGameState.prototype.serializeFull>;

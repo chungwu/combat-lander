@@ -1,6 +1,6 @@
-import { ClientMessage, GameInputEvent, ServerMessage } from "@/messages";
+import { ClientMessage, GameInputEvent, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
 import PartySocket from "partysocket";
-import { LanderGameState } from "./game-state";
+import { GameOptions, LanderGameState } from "./game-state";
 import { BaseLanderEngine } from "./engine";
 import assert from "assert";
 import { CLIENT_SNAPSHOT_FREQ, CLIENT_SNAPSHOT_GC_FREQ, PARTIAL_SYNC_FREQ } from "./constants";
@@ -10,6 +10,7 @@ import { KeyboardController } from "./controls";
 export class ClientLanderEngine extends BaseLanderEngine {
   private lastSyncTimestep: number;
   public controller: KeyboardController;
+  public resetPending: ResetPendingMessage | undefined;
   constructor(
     state: LanderGameState,
     private socket: PartySocket,
@@ -20,9 +21,11 @@ export class ClientLanderEngine extends BaseLanderEngine {
     this.initialTimeStep = initialTimeStep;
     this.lastSyncTimestep = initialTimeStep;
     this.controller = new KeyboardController(this);
+    this.resetPending = undefined;
     makeObservable(this, {
       selfLander: computed,
       timestep: observable,
+      resetPending: observable,
     });
   }
 
@@ -62,7 +65,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
         return;
       }
       console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg, this.game.world);
-      if (msg.type === "full" || msg.type === "partial") {
+      if ((msg.type === "full" || msg.type === "partial") && !this.game.winnerPlayerId) {
         // msg.time should always be > this.lastSyncTimestep as we don't expect
         // to receive sync messages out of order. It is, however, possible to 
         // receive the sync twice for the same time step, if there are two player
@@ -110,8 +113,13 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.reset();
         this.game.mergeFull(msg.paylod);
         this.initialTimeStep = this.timestep = this.lastSyncTimestep = msg.time;
+        this.resetPending = undefined;
       } else if (msg.type === "meta") {
         this.game.mergeMeta(msg.payload);
+      } else if (msg.type === "reset-pending") {
+        this.resetPending = msg;
+      } else if (msg.type === "reset-cancelled") {
+        this.resetPending = undefined;
       }
     });
   }
@@ -154,11 +162,23 @@ export class ClientLanderEngine extends BaseLanderEngine {
     });
   }
 
-  resetGame() {
+  resetGame(gameOptions: GameOptions, resetOptions: ResetOptions) {
     this.sendMessage({
       type: "request-reset",
       gameId: this.game.id,
       time: this.timestep,
+      options: gameOptions,
+      resetOptions: resetOptions
+    });
+  }
+
+  startGame(name: string, gameOptions: GameOptions) {
+    this.sendMessage({
+      type: "request-start",
+      name,
+      gameId: this.game.id,
+      time: this.timestep,
+      options: gameOptions,
     });
   }
 

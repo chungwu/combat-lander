@@ -1,5 +1,5 @@
 import Rapier, { ActiveCollisionTypes, ActiveEvents, Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
-import { LanderGameState } from "../game-state";
+import { GameOptions, LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
 import { FULL_THROTTLE_FORCE, JOYSTICK_CONFIG, LANDER_RADIUS, LanderColor, ROCKET_STATS, ROTATE_FUEL_BURN_RATE, RocketType, THROTTLE_FUEL_BURN_RATE, THROTTLE_RATE, TURN_RATE } from "../constants";
 import { normalizeAngle, rotateVector, vectorMagnitude } from "@/utils/math";
@@ -41,7 +41,10 @@ export class Lander extends GameObject {
   public rotatingRight = false;
   public thrustingUp = false;
   public thrustingDown = false;
-  public rocketState: Record<RocketType, { count: number, replenishFromTimestep: number}> = {
+  public rocketState: Record<
+    RocketType, 
+    { count: number, replenishFromTimestep: number}
+  > = {
     "small": {
       count: ROCKET_STATS.small.ammo,
       replenishFromTimestep: 0,
@@ -52,7 +55,10 @@ export class Lander extends GameObject {
     }
   };
 
-  static create(game: LanderGameState, opts: LanderOpts & { startingLocation: Vector }) {
+  static create(
+    game: LanderGameState, 
+    opts: LanderOpts & { startingLocation: Vector; }
+  ) {
     const body = game.world.createRigidBody(
       Rapier.RigidBodyDesc.dynamic()
       .setTranslation(opts.startingLocation.x, opts.startingLocation.y)
@@ -65,10 +71,17 @@ export class Lander extends GameObject {
     return new Lander(collider, opts);
   }
 
-  static createFrom(world: World, opts: ReturnType<typeof Lander.prototype.serialize>) {
-    const collider = world.getCollider(opts.handle);
-    const lander = new Lander(collider, { id: opts.id, name: opts.name, color: opts.color });
-    lander.mergeFrom(world, opts);
+  static createFrom(
+    world: World, 
+    payload: ReturnType<typeof Lander.prototype.serialize>,
+    gameOptions: GameOptions,
+  ) {
+    const collider = world.getCollider(payload.handle);
+    const lander = new Lander(
+      collider, 
+      { id: payload.id, name: payload.name, color: payload.color },
+    );
+    lander.mergeFrom(world, payload);
     return lander;
   }
 
@@ -131,16 +144,22 @@ export class Lander extends GameObject {
     }
   }
 
-  takeDamage(damage: number) {
-    this.health = Math.max(0, this.health - damage);
-    if (this.health === 0) {
-      this.throttle = 0;
-      this.thrustingDown = false;
-      this.thrustingUp = false;
-      this.targetRotation = null;
-      this.rotatingLeft = false;
-      this.rotatingRight = false;
-      this.joystickTarget = undefined;
+  takeDamage(damage: number, options: GameOptions) {
+    if (options.infiniteHealth) {
+      // We subtract only 1 health to avoid instant death, and to emit
+      // signal that we did take theoretical damage
+      this.health -= 1;
+    } else {
+      this.health = Math.max(0, this.health - damage);
+      if (this.health === 0) {
+        this.throttle = 0;
+        this.thrustingDown = false;
+        this.thrustingUp = false;
+        this.targetRotation = null;
+        this.rotatingLeft = false;
+        this.rotatingRight = false;
+        this.joystickTarget = undefined;
+      }
     }
   }
 
@@ -148,8 +167,18 @@ export class Lander extends GameObject {
     return this.health > 0;
   }
 
-  preStep(dt: number, timestep: number) {
-    super.preStep(dt, timestep);
+  preStep(dt: number, timestep: number, options: GameOptions) {
+    if (options.infiniteHealth) {
+      // replenish health
+      this.health = 100;
+    }
+
+    if (options.infiniteFuel) {
+      // replenish fuel
+      this.fuel = 100;
+    }
+
+    super.preStep(dt, timestep, options);
 
     this.body.resetForces(false);
     if (this.fuel === 0) {
@@ -178,7 +207,7 @@ export class Lander extends GameObject {
       }
   
       if (this.throttle !== 0) {
-        const force = new Vector2(0, FULL_THROTTLE_FORCE);
+        const force = new Vector2(0, this.throttle * FULL_THROTTLE_FORCE);
         const rotatedForce = rotateVector(force, rotation);
         this.body.addForce(rotatedForce, true);
         this.fuel = Math.max(0, this.fuel - THROTTLE_FUEL_BURN_RATE * this.throttle * dt);

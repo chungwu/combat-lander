@@ -20,6 +20,10 @@
   box-shadow: 0 0 20px var(--control-border-hover);
 }
 
+.root:focus-visible {
+  outline: none;
+}
+
 .large {
   font-size: var(--text-size-large);
 }

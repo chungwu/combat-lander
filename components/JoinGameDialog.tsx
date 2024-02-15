@@ -30,7 +30,7 @@ export function JoinGameDialog(props: {
           />
           <div style={{display: "flex", gap: 24}}>
             <Button type="submit" styleType="primary">Join!</Button>
-            <Button styleType="clear" onPress={close}>Cancel</Button>
+            <Button styleType="clear" onPress={close}>Nah...</Button>
           </div>
         </Form>
       )}

@@ -16,14 +16,21 @@ import { GameObject } from "./objects/game-object";
 import { LandingPad } from "./objects/landing-pad";
 import { minBy } from "lodash";
 
+export interface GameOptions {
+  infiniteHealth: boolean;
+  infiniteFuel: boolean;
+}
+
 export class LanderGameState {
-  public resetTimestamp: number | undefined;
   public winnerPlayerId: string | undefined;
   public playerWins: Record<string, number> = {};
   private eventQueue: EventQueue = new EventQueue(true);
 
-  static createNew() {
-    const moon = generateRandomMap();
+  static createNew(opts: {
+    options: GameOptions, 
+    moon?: Moon
+  }) {
+    const moon = opts.moon ?? generateRandomMap();
     const world = new World(new Vector2(0, moon.gravity));
     world.numSolverIterations = 1;
     const game = new LanderGameState(
@@ -34,7 +41,8 @@ export class LanderGameState {
       Sky.create(world, moon),
       moon.landingPads.map((pad, i) => LandingPad.create(world, moon, i)),
       [],
-      []
+      [],
+      opts.options,
     );
     return game;
   }
@@ -47,8 +55,9 @@ export class LanderGameState {
       Ground.createFrom(world, payload.ground),
       Sky.createFrom(world, payload.sky),
       payload.landingPads.map((padPayload, i) => LandingPad.createFrom(world, moon, i, padPayload)),
-      payload.landers.map(l => Lander.createFrom(world, l)),
-      payload.rockets.map(r => Rocket.createFrom(world, r))
+      payload.landers.map(l => Lander.createFrom(world, l, payload.options)),
+      payload.rockets.map(r => Rocket.createFrom(world, r)),
+      payload.options
     );
     return game;
   }
@@ -62,28 +71,26 @@ export class LanderGameState {
     public landingPads: LandingPad[],
     public landers: Lander[],
     public rockets: Rocket[],
+    public options: GameOptions,
   ) {
-    this.resetTimestamp = undefined;
     this.winnerPlayerId = undefined;
     makeObservable(this, {
       landers: observable,
       rockets: observable,
-      resetTimestamp: observable,
       winnerPlayerId: observable,
       playerWins: observable,
     });
   }
 
   step(timestep: number) {
-    // If there's a winner, no more stepping!
     if (this.winnerPlayerId) {
       return;
     }
-
+    
     const world = this.world;
     const dt = world.timestep;
     for (const steppable of this.steppables()) {
-      steppable.preStep(dt, timestep);
+      steppable.preStep(dt, timestep, this.options);
     }
 
     this.world.step(this.eventQueue);
@@ -92,17 +99,17 @@ export class LanderGameState {
     this.eventQueue.drainContactForceEvents(event => {
       const force = event.maxForceMagnitude() * 0.001;
       const processCollision = (lander: Lander, obj: GameObject) => {
-        if (!lander.isAlive()) {
+        if (!lander.isAlive() || lander.id === this.winnerPlayerId) {
           return;
         }
         if (obj instanceof Ground) {
-          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.ground)
+          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.ground, this.options)
         } else if (obj instanceof Sky) {
-          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.sky)
+          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.sky, this.options)
         } else if (obj instanceof Rocket) {
-          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.rocket)
+          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.rocket, this.options)
         } else if (obj instanceof Lander) {
-          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.lander)
+          lander.takeDamage(force * dt * CONTACT_DAMAGE_FACTOR.lander, this.options)
         }
       };
 
@@ -119,7 +126,7 @@ export class LanderGameState {
     });
 
     for (const steppable of this.steppables()) {
-      steppable.postStep(dt, timestep);
+      steppable.postStep(dt, timestep, this.options);
       steppable.wrapTranslation(this.moon.worldWidth);
     }
   }
@@ -234,9 +241,9 @@ export class LanderGameState {
       landers: this.landers.map(l => l.serialize()),
       rockets: this.rockets.map(r => r.serialize()),
       landingPads: this.landingPads.map(l => l.serialize()),
-      resetTimestamp: this.resetTimestamp,
       winnerPlayerId: this.winnerPlayerId,
       playerWins: this.playerWins,
+      options: this.options,
     };
   }
 
@@ -252,7 +259,6 @@ export class LanderGameState {
   serializeMeta() {
     return {
       id: this.id,
-      resetTimestamp: this.resetTimestamp,
       winnerPlayerId: this.winnerPlayerId,
       playerWins: this.playerWins,
     };
@@ -266,6 +272,7 @@ export class LanderGameState {
   mergeFull(payload: ReturnType<typeof this.serializeFull>) {
     const prevWorld = this.world;
     this.id = payload.id;
+    this.options = payload.options;
     this.moon = payload.moon;
     this.world = payload.world;
     this.ground.mergeFrom(this.world, payload.ground);
@@ -276,7 +283,6 @@ export class LanderGameState {
       this.landingPads[i].mergeFrom(this.world, payload.landingPads[i]);
     }
 
-    this.resetTimestamp = payload.resetTimestamp;
     this.winnerPlayerId = payload.winnerPlayerId;
     this.playerWins = payload.playerWins;
   }
@@ -295,7 +301,6 @@ export class LanderGameState {
 
   mergeMeta(payload: ReturnType<typeof this.serializeMeta>) {
     this.id = payload.id;
-    this.resetTimestamp = payload.resetTimestamp;
     this.winnerPlayerId = payload.winnerPlayerId;
     this.playerWins = payload.playerWins;
   }
@@ -304,7 +309,7 @@ export class LanderGameState {
     this.mergeObjects(
       "landers",
       fromLanders,
-      (fromLander) => Lander.createFrom(this.world, fromLander)
+      (fromLander) => Lander.createFrom(this.world, fromLander, this.options)
     );
   }
 

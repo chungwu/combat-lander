@@ -17,6 +17,11 @@
   --control-border: var(--gray-7);
   --control-border-hover: var(--gray-8);
   --control-border-focused: var(--yellow-10);
+
+  --z-modal: 10;
+  --z-alert: 9;
+  --z-hud: 5;
+  --z-screen-effect: 2;
 }
 
 * {

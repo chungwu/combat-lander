@@ -1,0 +1,34 @@
+.root {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.checkbox {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--control-border);
+  border-radius: var(--control-radius);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.root:hover .checkbox {
+  border-color: var(--control-border-hover);
+}
+
+.root[data-selected] .checkbox {
+  border-color: var(--green-7);
+  color: var(--green-10);
+}
+.root[data-selected]:hover .checkbox {
+  border-color: var(--green-8);
+}
+
+
+
+.root[data-focus-visible] .checkbox {
+  border-color: var(--control-border-focused);
+}

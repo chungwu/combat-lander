@@ -1,28 +1,29 @@
 import { ModalOverlay, Modal as BaseModal, Dialog } from "react-aria-components";
 import React from "react";
 import { MONO } from "@/fonts";
+import sty from "./Modal.module.css";
+import classNames from "classnames";
 
 export function Modal(props: {
   children?: React.ReactNode | ((ps: {close: () => void}) => React.ReactNode);
   underlayBlur?: boolean;
   modalBlur?: boolean;
   isOpen?: boolean;
+  modalType?: "dialog" | "alertdialog"
 }) {
-  const { children, underlayBlur, modalBlur, isOpen, ...rest } = props;
+  const { children, underlayBlur, modalBlur, isOpen, modalType, ...rest } = props;
   return (
     <ModalOverlay 
-      className={`app dark ${MONO.variable}`}
+      className={classNames("app", "dark", MONO.variable, sty.underlay, {
+        [sty.modalAlert]: modalType === "alertdialog"
+      })}
       isOpen={isOpen}
       style={{
-        position: "fixed", 
-        top: 0, left: 0, right: 0, bottom: 0, 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center", 
         backdropFilter: underlayBlur ? "blur(8px)" : undefined,
       }}
     >
       <BaseModal 
+        className={sty.modal}
         style={{
           padding: 32,
           border: "1px solid white",
@@ -30,7 +31,7 @@ export function Modal(props: {
           zIndex: 5,
         }}
       >
-        <Dialog style={{outline: "none"}}>
+        <Dialog className={sty.dialog} role={modalType}>
           {children}
         </Dialog>
       </BaseModal>

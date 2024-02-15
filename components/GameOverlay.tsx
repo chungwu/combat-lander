@@ -17,6 +17,7 @@ import { useClientEngine } from "./contexts";
 import { Button as BaseButton } from "react-aria-components";
 import { ensure, isTouchDevice } from "@/utils/utils";
 import { Joystick } from "react-joystick-component";
+import { ResetGameDialog, StartGameDialog } from "./StartGameDialog";
 
 export const GameOverlay = observer(function GameOverlay() {
   return (
@@ -33,10 +34,41 @@ export const GameOverlay = observer(function GameOverlay() {
 const TopRight = observer(function TopRight(props: {}) {
   const engine = useClientEngine();
   const game = engine.game;
+  const prevName = localStorage.getItem("playerName");
+
+  const maybeSavePlayerName = (name: string) => {
+    if (!name.startsWith("Player ")) {
+      // Store a "real" name for future use
+      localStorage.setItem("playerName", name);
+    }
+  };
+
   return (
     <div className={sty.topRight}>
     {engine.isPlaying ? (
-      <ResetGameButton />
+      <DialogTrigger>
+        <Button>
+          Start new game
+        </Button>
+        <ResetGameDialog
+          onStart={(options) => {
+            engine.resetGame(options, { preserveMap: false, preserveScores: false});
+          }}
+        />
+      </DialogTrigger>
+    ) : game.landers.length === 0 ? (
+      <DialogTrigger>
+        <Button size="large" styleType="super-primary">
+          Start game!
+        </Button>
+        <StartGameDialog
+          defaultName={prevName ?? `Player 1`}
+          onStart={(opts) => {
+            maybeSavePlayerName(opts.name);
+            engine.startGame(opts.name, opts.options);
+          }}
+        />
+      </DialogTrigger>
     ) : (
       <DialogTrigger>
         <Button
@@ -46,8 +78,11 @@ const TopRight = observer(function TopRight(props: {}) {
           Join
         </Button>
         <JoinGameDialog 
-          defaultName={`Player ${game.landers.length + 1}`}
-          onJoin={opts => engine.joinGame(opts)}
+          defaultName={prevName ?? `Player ${game.landers.length + 1}`}
+          onJoin={opts => {
+            maybeSavePlayerName(opts.name);
+            engine.joinGame(opts);
+          }}
         />
       </DialogTrigger>
     )}
@@ -62,44 +97,33 @@ const MajorGameMessage = observer(function MajorGameMessage(props: {
   if (game.winnerPlayerId) {
     const lander = game.landers.find(l => l.id === game.winnerPlayerId);
     return (
-      <Modal modalBlur isOpen>
+      <Modal modalBlur isOpen modalType="alertdialog">
         <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 24}}>
           <Heading slot="title">{lander?.name} has won!!!</Heading>
-          <div>
-            Restarting in <TimerTill target={game.resetTimestamp!}/>s...
-          </div>
+          {engine.resetPending && (
+            <div>
+              Restarting in <TimerTill target={engine.resetPending.resetTimestamp!}/>s...
+            </div>
+          )}
         </div>
       </Modal>
     );
-  } else if (game.resetTimestamp) {
+  } else if (engine.resetPending) {
     return (
-      <Modal modalBlur isOpen>
+      <Modal modalBlur isOpen modalType="alertdialog">
         <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 24}}>
-          <Heading slot="title">Restarting in <TimerTill target={game.resetTimestamp}/>s...</Heading>
-          <div>
-            <Button onPress={() => engine.cancelResetGame()}>Cancel!</Button>
-          </div>
+          <Heading slot="title">{engine.resetPending.cause === "requested" ? "Starting new game" : "Restarting"} in <TimerTill target={engine.resetPending.resetTimestamp}/>s...</Heading>
+          {engine.resetPending.cause === "requested" && (
+            <div>
+              <Button onPress={() => engine.cancelResetGame()}>Cancel!</Button>
+            </div>
+          )}
         </div>
       </Modal>
     );
   }
   return null;
 })
-
-const ResetGameButton = observer(function ResetGameButton(props: {
-}) {
-  const engine = useClientEngine();
-  const game = engine.game;
-  if (!game.resetTimestamp) {
-    return (
-      <Button
-        onPress={() => engine.resetGame()}
-      >
-        Restart game
-      </Button>
-    );
-  }
-});
 
 function TimerTill(props: { target: number }) {
   const { target } = props;
@@ -151,7 +175,7 @@ const DamageFlasher = observer(function DamageFlasher(props: {
         return lander?.health
       },
       (health, prevHealth) => {
-        if (health != null && prevHealth != null && health < prevHealth) {
+        if (health != null && prevHealth != null && health !== 100) {
           // Took damage!
           if (ref.current) {
             ref.current.animate([

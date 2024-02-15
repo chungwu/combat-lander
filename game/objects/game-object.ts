@@ -1,6 +1,6 @@
 import { ensure, isServer } from "@/utils/utils";
 import { Collider, ColliderDesc, RigidBody, Vector2, World } from "@dimforge/rapier2d";
-import { LanderGameState } from "../game-state";
+import { GameOptions, LanderGameState } from "../game-state";
 import assert from "assert";
 
 export abstract class GameObject {
@@ -42,11 +42,11 @@ export abstract class GameObject {
     this.collider = collider;
   }
 
-  preStep(dt: number, timestep: number) {
+  preStep(dt: number, timestep: number, options: GameOptions) {
 
   }
 
-  postStep(dt: number, timestep: number) {
+  postStep(dt: number, timestep: number, options: GameOptions) {
   }
 
   wrapTranslation(worldWidth: number) {

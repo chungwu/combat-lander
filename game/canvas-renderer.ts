@@ -122,9 +122,9 @@ export class CanvasRenderer {
       seenHandles.add(object.handle);
       let gfxs = this.handle2gfx.get(object.handle);
       if (!gfxs) {
-        const main = this.createObjectGraphics(object);
-        const left = this.createObjectGraphics(object);
-        const right = this.createObjectGraphics(object);
+        const main = this.createObjectGraphics(object, game);
+        const left = this.createObjectGraphics(object, game);
+        const right = this.createObjectGraphics(object, game);
         gfxs = [main, left, right];
         this.handle2gfx.set(object.handle, gfxs);
       } else {
@@ -241,10 +241,10 @@ export class CanvasRenderer {
     }
   }
 
-  private createObjectGraphics(object: GameObject) {
+  private createObjectGraphics(object: GameObject, game: LanderGameState) {
     const gfx = (() => {
       if (object instanceof Lander) {
-        return this.createLanderGraphics(object);
+        return this.createLanderGraphics(object, game);
       } else if (object instanceof Ground) {
         return this.createGroundGraphics(object);
       } else if (object instanceof Sky) {
@@ -372,7 +372,7 @@ export class CanvasRenderer {
     landerHealth.visible = false;
   }
 
-  private createLanderGraphics(lander: Lander) {    
+  private createLanderGraphics(lander: Lander, game: LanderGameState) {    
     const container = new Container();
 
     const LANDER_LENGTH = lander.radius * 2;
@@ -396,6 +396,9 @@ export class CanvasRenderer {
     const healthGauge = new Graphics();
     healthGauge.name = "healthGauge";
     drawLanderHealthGauge(lander, healthGauge);
+    if (game.options.infiniteHealth) {
+      healthGauge.visible = false;
+    }
 
     const fuelGauge = new Container();
     fuelGauge.name = "fuelGauge";
@@ -408,6 +411,9 @@ export class CanvasRenderer {
     fuelGaugeMask.drawPolygon(SHUTTLE_SHAPES.booster.map(([x, y]) => ({x: x * LANDER_LENGTH, y: y * LANDER_LENGTH})));
     fuelGauge.mask = fuelGaugeMask;
     drawLanderFuelMeter(lander, fuelMeter);
+    if (game.options.infiniteFuel) {
+      fuelGauge.visible = false;
+    }
 
     container.addChild(healthGauge);
     container.addChild(flame);
