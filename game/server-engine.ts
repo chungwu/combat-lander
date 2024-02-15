@@ -106,6 +106,10 @@ export class ServerLanderEngine extends BaseLanderEngine {
     this.resetTimestamp = undefined;
   }
 
+  dispose() {
+    // this.game.world.free();
+  }
+
   private resetGame(gameOptions: GameOptions, resetOptions: ResetOptions) {
     const prevGame = this.game;
     const newGame = LanderGameState.createNew({

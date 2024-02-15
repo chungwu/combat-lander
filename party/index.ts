@@ -5,14 +5,21 @@ import { ensure } from "@/utils/utils";
 import type * as Party from "partykit/server";
 import { loadRapierWasm } from "./rapier-wasm";
 
+await loadRapierWasm();
+
 export default class Server implements Party.Server {
   private _engine: ServerLanderEngine | undefined;
   constructor(readonly room: Party.Room) {
   }
 
   async onStart() {
-    await loadRapierWasm();
-    this._engine = new ServerLanderEngine(this.room);
+  }
+
+  private async ensureInitialized() {
+    if (!this._engine) {
+      console.log(`Initializing engine... ${this.room.id}`);
+      this._engine = new ServerLanderEngine(this.room);
+    }
   }
 
   get engine() {
@@ -27,6 +34,11 @@ export default class Server implements Party.Server {
   room: ${this.room.id}
   url: ${new URL(ctx.request.url).pathname}`
     );
+
+    if (!this._engine) {
+      await this.ensureInitialized();
+    }
+
     this.engine.onConnect(conn);
   }
 
@@ -36,8 +48,14 @@ export default class Server implements Party.Server {
   }
 
   onClose(conn: Party.Connection) {
-    console.log("CLOSED", conn.id);
+    const connsLeft = Array.from(this.room.getConnections()).length;
+    console.log(`Closed: ${conn.id}; now ${connsLeft} connections left`);
     this.engine.onDisconnect(conn);
+
+    if (connsLeft === 0) {
+      this.engine.dispose();
+      this._engine = undefined;
+    }
   }
 
   private unpackMessage(message: string | Uint8Array | Buffer): ClientMessage {
