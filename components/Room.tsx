@@ -5,6 +5,7 @@ import { GameOverlay } from "./GameOverlay";
 import { ClientEngineProvider } from "./contexts";
 import { useRouter } from "next/router";
 import { JOYSTICK_CONFIG } from "@/game/constants";
+import { isTouchDevice } from "@/utils/utils";
 
 export function Room(props: {
   roomId: string
@@ -13,7 +14,7 @@ export function Room(props: {
   const { game, engine } = useLanderSocket(roomId);
   (globalThis as any).game = game;
   const flags = useRouter().query;
-  if (flags.joystick) {
+  if (flags.joystick || isTouchDevice()) {
     JOYSTICK_CONFIG.use = true;
     JOYSTICK_CONFIG.scheme = flags.joystick as any;
   }
