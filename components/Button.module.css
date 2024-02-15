@@ -28,6 +28,11 @@
   font-size: var(--text-size-large);
 }
 
+.small {
+  font-size: var(--text-size-tiny);
+  padding: 4px 8px;
+}
+
 .primary {
   border-color: var(--gray-11);
   font-weight: bold;

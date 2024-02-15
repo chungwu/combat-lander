@@ -1,7 +1,7 @@
 import { JOYSTICK_CONFIG, ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
 import { PseudoKeyboardEvent } from "@/game/controls";
 import { Lander } from "@/game/objects/lander";
-import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp, faMaximize, faMinimize } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import sortBy from "lodash/sortBy";
@@ -45,47 +45,48 @@ const TopRight = observer(function TopRight(props: {}) {
 
   return (
     <div className={sty.topRight}>
-    {engine.isPlaying ? (
-      <DialogTrigger>
-        <Button>
-          Start new game
-        </Button>
-        <ResetGameDialog
-          onStart={(options) => {
-            engine.resetGame(options, { preserveMap: false, preserveScores: false});
-          }}
-        />
-      </DialogTrigger>
-    ) : game.landers.length === 0 ? (
-      <DialogTrigger>
-        <Button size="large" styleType="super-primary">
-          Start game!
-        </Button>
-        <StartGameDialog
-          defaultName={prevName ?? `Player 1`}
-          onStart={(opts) => {
-            maybeSavePlayerName(opts.name);
-            engine.startGame(opts.name, opts.options);
-          }}
-        />
-      </DialogTrigger>
-    ) : (
-      <DialogTrigger>
-        <Button
-          size="large"
-          styleType="super-primary"
-        >
-          Join
-        </Button>
-        <JoinGameDialog 
-          defaultName={prevName ?? `Player ${game.landers.length + 1}`}
-          onJoin={opts => {
-            maybeSavePlayerName(opts.name);
-            engine.joinGame(opts);
-          }}
-        />
-      </DialogTrigger>
-    )}
+      {engine.isPlaying ? (
+        <DialogTrigger>
+          <Button>
+            Start new game
+          </Button>
+          <ResetGameDialog
+            onStart={(options) => {
+              engine.resetGame(options, { preserveMap: false, preserveScores: false});
+            }}
+          />
+        </DialogTrigger>
+      ) : game.landers.length === 0 ? (
+        <DialogTrigger>
+          <Button size="large" styleType="super-primary">
+            Start game!
+          </Button>
+          <StartGameDialog
+            defaultName={prevName ?? `Player 1`}
+            onStart={(opts) => {
+              maybeSavePlayerName(opts.name);
+              engine.startGame(opts.name, opts.options);
+            }}
+          />
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger>
+          <Button
+            size="large"
+            styleType="super-primary"
+          >
+            Join
+          </Button>
+          <JoinGameDialog 
+            defaultName={prevName ?? `Player ${game.landers.length + 1}`}
+            onJoin={opts => {
+              maybeSavePlayerName(opts.name);
+              engine.joinGame(opts);
+            }}
+          />
+        </DialogTrigger>
+      )}
+      <FullScreenButton />
     </div>
   );
 });
@@ -448,3 +449,31 @@ const KeyboardKey = observer(function KeyboardKey(props: {
     </BaseButton>
   );
 }, {forwardRef: true})
+
+function FullScreenButton() {
+  const [isFull, setFull] = React.useState(false);
+
+  if (!isTouchDevice()) {
+    return null;
+  }
+
+  return (
+    <Button size="small"
+      onPress={async () => {
+        if (isFull) {
+          document.exitFullscreen();
+          setFull(false);
+        } else {
+          const app = document.getElementsByClassName("app")[0];
+          if (app) {
+            await app.requestFullscreen();
+            setFull(true);
+          }
+        }
+      }}
+    >
+      <FontAwesomeIcon icon={isFull ? faMinimize : faMaximize} />
+    </Button>
+  )
+
+}

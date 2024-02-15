@@ -12,6 +12,8 @@
   --text-color: var(--gray-12);
   --text-size: 16px;
   --text-size-large: 24px;
+  --text-size-small: 12px;
+  --text-size-tiny: 10px;
 
   --control-radius: 0;
   --control-border: var(--gray-7);

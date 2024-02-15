@@ -6,6 +6,7 @@ import { ClientEngineProvider } from "./contexts";
 import { useRouter } from "next/router";
 import { JOYSTICK_CONFIG } from "@/game/constants";
 import { isTouchDevice } from "@/utils/utils";
+import React from "react";
 
 export function Room(props: {
   roomId: string
@@ -16,17 +17,19 @@ export function Room(props: {
   const flags = useRouter().query;
   if (flags.joystick || isTouchDevice()) {
     JOYSTICK_CONFIG.use = true;
-    JOYSTICK_CONFIG.scheme = flags.joystick as any;
+    if (flags.joystick) {
+      JOYSTICK_CONFIG.scheme = flags.joystick as any;
+    }
   }
 
   return (
     <div className={sty.root}>
-      {game && engine && (
+      {game && engine ? (
         <ClientEngineProvider engine={engine}>
           <GameCanvas game={game} playerId={engine.playerId}/>
           <GameOverlay />
         </ClientEngineProvider>
-      )}
+      ) : "Connecting to game server..."}
     </div>
   );
 }
