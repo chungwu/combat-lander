@@ -14,6 +14,12 @@
   outline: none;
 }
 
+@media screen and (max-width: 1024px) {
+  .menuItem {
+    padding: 24px 24px;
+  }
+}
+
 .popover {
   backdrop-filter: blur(8px);
   border: 1px solid var(--control-border);

@@ -28,6 +28,7 @@
   flex-direction: column;
   backdrop-filter: blur(2px);
   z-index: var(--z-hud);
+  font-size: var(--text-size-small);
 }
 
 .leaderBoardItem {

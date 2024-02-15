@@ -17,6 +17,10 @@ import { Rocket } from "./rocket";
 
 type RenderedObjects = [Container, Container, Container];
 
+function isPortrait() {
+  return window.innerHeight > window.innerWidth * 1.5;
+}
+
 export class CanvasRenderer {
   handle2gfx: Map<number, RenderedObjects>;
   handle2label: Map<number, DisplayObject | null>;
@@ -25,6 +29,7 @@ export class CanvasRenderer {
   viewport: Viewport;
   screenRoot: Container;
   curGameId: string | undefined;
+
   constructor() {
     this.handle2gfx = new Map();
     this.handle2label = new Map();
@@ -231,8 +236,12 @@ export class CanvasRenderer {
       const marginYTop = this.viewport.screenHeightInWorldPixels * 0.2;
       this.viewport.top = Math.min(this.viewport.top, (this.viewport.worldHeight - selfLander.translation.y) - marginYTop);
       
+      // Move the viewport bottom to follow the lander down, but don't move
+      // lower than 200 past ground level in portrait mode, so we can make
+      // use of all that vertical real estate.
       const marginYBottom = this.viewport.screenHeightInWorldPixels * 0.6;
-      this.viewport.bottom = Math.min(this.viewport.worldHeight, Math.max(
+      const minBottom = isPortrait() ? this.viewport.worldHeight + 200 : this.viewport.worldHeight + 50;
+      this.viewport.bottom = Math.min(minBottom, Math.max(
         this.viewport.bottom, 
         (this.viewport.worldHeight - selfLander.translation.y) + marginYBottom,
       ));
