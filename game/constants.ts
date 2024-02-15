@@ -99,8 +99,8 @@ export function getLanderColor(color: LanderColor, level: 1|2|3|4|5|6|7|8|9|10|1
 
 // Sync mechanics
 export const PARTIAL_SYNC_FREQ = 60; // once per second
-export const SERVER_SNAPSHOT_GC_FREQ = 60 * 30; // every 30 seconds
-export const SERVER_SNAPSHOT_FREQ = 10; // save snapshot every 10 steps
+export const SERVER_SNAPSHOT_GC_FREQ = 60 * 10; // every 10 seconds
+export const SERVER_SNAPSHOT_FREQ = 1; // save every snapshot
 
 export const CLIENT_SNAPSHOT_GC_FREQ = 60 * 1; // gc every second
 export const CLIENT_SNAPSHOT_FREQ = 1; // save every snapshot

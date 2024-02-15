@@ -234,7 +234,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
       this.shouldImmediatelyBroadcastSync = true;
     }
     if (this.timestep < this.lastSyncTimestep) {
-      console.log(`[${this.timestep}] Applied user input from before last sync! Immediately correct history`);
+      console.log(`[${this.timestep}] Applied user input from before last sync (${this.lastSyncTimestep})! Immediately correct history`);
       this.shouldImmediatelyBroadcastSync = true;
     }
   }
