@@ -35,6 +35,7 @@ const TopRight = observer(function TopRight(props: {}) {
   const engine = useClientEngine();
   const game = engine.game;
   const prevName = localStorage.getItem("playerName");
+  const [isFull, setFull] = React.useState(false);
 
   const maybeSavePlayerName = (name: string) => {
     if (!name.startsWith("Player ")) {
@@ -45,48 +46,52 @@ const TopRight = observer(function TopRight(props: {}) {
 
   return (
     <div className={sty.topRight}>
-      {engine.isPlaying ? (
-        <DialogTrigger>
-          <Button>
-            Start new game
-          </Button>
-          <ResetGameDialog
-            onStart={(options) => {
-              engine.resetGame(options, { preserveMap: false, preserveScores: false});
-            }}
-          />
-        </DialogTrigger>
-      ) : game.landers.length === 0 ? (
-        <DialogTrigger>
-          <Button size="large" styleType="super-primary">
-            Start game!
-          </Button>
-          <StartGameDialog
-            defaultName={prevName ?? `Player 1`}
-            onStart={(opts) => {
-              maybeSavePlayerName(opts.name);
-              engine.startGame(opts.name, opts.options);
-            }}
-          />
-        </DialogTrigger>
-      ) : (
-        <DialogTrigger>
-          <Button
-            size="large"
-            styleType="super-primary"
-          >
-            Join
-          </Button>
-          <JoinGameDialog 
-            defaultName={prevName ?? `Player ${game.landers.length + 1}`}
-            onJoin={opts => {
-              maybeSavePlayerName(opts.name);
-              engine.joinGame(opts);
-            }}
-          />
-        </DialogTrigger>
+      {!isFull && (
+        // Don't show buttons when in full screen mode, because
+        // the modals don't show up in full screen on android :-/
+        engine.isPlaying ? (
+          <DialogTrigger>
+            <Button>
+              Start new game
+            </Button>
+            <ResetGameDialog
+              onStart={(options) => {
+                engine.resetGame(options, { preserveMap: false, preserveScores: false});
+              }}
+            />
+          </DialogTrigger>
+        ) : game.landers.length === 0 ? (
+          <DialogTrigger>
+            <Button size="large" styleType="super-primary">
+              Start game!
+            </Button>
+            <StartGameDialog
+              defaultName={prevName ?? `Player 1`}
+              onStart={(opts) => {
+                maybeSavePlayerName(opts.name);
+                engine.startGame(opts.name, opts.options);
+              }}
+            />
+          </DialogTrigger>
+        ) : (
+          <DialogTrigger>
+            <Button
+              size="large"
+              styleType="super-primary"
+            >
+              Join
+            </Button>
+            <JoinGameDialog 
+              defaultName={prevName ?? `Player ${game.landers.length + 1}`}
+              onJoin={opts => {
+                maybeSavePlayerName(opts.name);
+                engine.joinGame(opts);
+              }}
+            />
+          </DialogTrigger>
+        )
       )}
-      <FullScreenButton />
+      <FullScreenButton isFull={isFull} setFull={setFull} />
     </div>
   );
 });
@@ -450,8 +455,11 @@ const KeyboardKey = observer(function KeyboardKey(props: {
   );
 }, {forwardRef: true})
 
-function FullScreenButton() {
-  const [isFull, setFull] = React.useState(false);
+function FullScreenButton(props: {
+  isFull: boolean;
+  setFull: (full: boolean) => void;
+}) {
+  const { isFull, setFull } = props;
 
   if (!isTouchDevice()) {
     return null;
