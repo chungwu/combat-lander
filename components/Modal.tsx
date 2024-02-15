@@ -13,7 +13,7 @@ export function Modal(props: {
 }) {
   const { children, underlayBlur, modalBlur, isOpen, modalType, ...rest } = props;
   return (
-    <ModalOverlay 
+    <ModalOverlay
       className={classNames("app", "dark", MONO.variable, sty.underlay, {
         [sty.modalAlert]: modalType === "alertdialog"
       })}
@@ -22,7 +22,7 @@ export function Modal(props: {
         backdropFilter: underlayBlur ? "blur(8px)" : undefined,
       }}
     >
-      <BaseModal 
+      <BaseModal
         className={sty.modal}
         style={{
           backdropFilter: modalBlur ? "blur(8px)" : undefined,

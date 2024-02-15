@@ -52,27 +52,32 @@ export function StartGameDialog(props: {
 
 export function ResetGameDialog(props: {
   onStart: (opts: GameOptions) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }) {
-  const { onStart } = props;
+  const { onStart, isOpen, onClose } = props;
   return (
-    <Modal underlayBlur>
+    <Modal underlayBlur {...isOpen == null ? {} : {isOpen}}>
       {({close}) => (
         <Form
           style={{display: "flex", flexDirection: "column", gap: 24}}
           onSubmit={e => {
             e.preventDefault();
             const data = new FormData(e.currentTarget);
-            console.log("FORM DATA", data);
             onStart(extractGameOptions(data));
             close();
+            onClose?.();
           }}
         >
-          <Heading slot="title">Start new game</Heading>
+          <Heading slot="title">Reset game</Heading>
 
           <GameOptionsForm />
           <div style={{display: "flex", gap: 24}}>
-            <Button type="submit" styleType="primary">Start!</Button>
-            <Button styleType="clear" onPress={close}>Nevermind...</Button>
+            <Button type="submit" styleType="primary" autoFocus>Start!</Button>
+            <Button styleType="clear" onPress={() => {
+              close();
+              onClose?.();
+            }}>Nevermind...</Button>
           </div>
         </Form>
       )}

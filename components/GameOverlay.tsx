@@ -1,23 +1,25 @@
 import { JOYSTICK_CONFIG, ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
 import { PseudoKeyboardEvent } from "@/game/controls";
 import { Lander } from "@/game/objects/lander";
-import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp, faMaximize, faMinimize } from "@fortawesome/free-solid-svg-icons";
+import { blurActive, isFullScreenMode } from "@/utils/dom-utils";
+import { ensure, isTouchDevice, makeShortId } from "@/utils/utils";
+import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp, faBars } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import sortBy from "lodash/sortBy";
 import { reaction } from "mobx";
 import { observer } from "mobx-react-lite";
+import { useRouter } from "next/router";
 import React from "react";
-import { DialogTrigger, Heading } from "react-aria-components";
+import { Button as BaseButton, DialogTrigger, Heading, MenuTrigger } from "react-aria-components";
+import { Joystick } from "react-joystick-component";
 import { Button } from "./Button";
 import sty from "./GameOverlay.module.css";
 import { JoinGameDialog } from "./JoinGameDialog";
+import { Menu, MenuItem, Popover } from "./Menu";
 import { Modal } from "./Modal";
-import { useClientEngine } from "./contexts";
-import { Button as BaseButton } from "react-aria-components";
-import { ensure, isTouchDevice } from "@/utils/utils";
-import { Joystick } from "react-joystick-component";
 import { ResetGameDialog, StartGameDialog } from "./StartGameDialog";
+import { useClientEngine } from "./contexts";
 
 export const GameOverlay = observer(function GameOverlay() {
   return (
@@ -35,7 +37,10 @@ const TopRight = observer(function TopRight(props: {}) {
   const engine = useClientEngine();
   const game = engine.game;
   const prevName = localStorage.getItem("playerName");
-  const [isFull, setFull] = React.useState(false);
+  const { isFullScreen, toggleFullScreen } = useToggleFullScreen();
+  const [ resetOpen, setResetOpen ] = React.useState(false);
+  const router = useRouter();
+  const roomId = router.query.roomId as string;
 
   const maybeSavePlayerName = (name: string) => {
     if (!name.startsWith("Player ")) {
@@ -46,52 +51,81 @@ const TopRight = observer(function TopRight(props: {}) {
 
   return (
     <div className={sty.topRight}>
-      {!isFull && (
-        // Don't show buttons when in full screen mode, because
-        // the modals don't show up in full screen on android :-/
-        engine.isPlaying ? (
-          <DialogTrigger>
-            <Button>
-              Start new game
-            </Button>
-            <ResetGameDialog
-              onStart={(options) => {
-                engine.resetGame(options, { preserveMap: false, preserveScores: false});
-              }}
-            />
-          </DialogTrigger>
-        ) : game.landers.length === 0 ? (
-          <DialogTrigger>
-            <Button size="large" styleType="super-primary">
-              Start game!
-            </Button>
-            <StartGameDialog
-              defaultName={prevName ?? `Player 1`}
-              onStart={(opts) => {
-                maybeSavePlayerName(opts.name);
-                engine.startGame(opts.name, opts.options);
-              }}
-            />
-          </DialogTrigger>
-        ) : (
-          <DialogTrigger>
-            <Button
-              size="large"
-              styleType="super-primary"
-            >
-              Join
-            </Button>
-            <JoinGameDialog 
-              defaultName={prevName ?? `Player ${game.landers.length + 1}`}
-              onJoin={opts => {
-                maybeSavePlayerName(opts.name);
-                engine.joinGame(opts);
-              }}
-            />
-          </DialogTrigger>
-        )
+      {engine.isPlaying ? (
+        null
+      ) : game.landers.length === 0 ? (
+        <DialogTrigger>
+          <Button size="large" styleType="super-primary">
+            Start game!
+          </Button>
+          <StartGameDialog
+            defaultName={prevName ?? `Player 1`}
+            onStart={(opts) => {
+              maybeSavePlayerName(opts.name);
+              engine.startGame(opts.name, opts.options);
+            }}
+          />
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger>
+          <Button
+            size="large"
+            styleType="super-primary"
+          >
+            Join
+          </Button>
+          <JoinGameDialog 
+            defaultName={prevName ?? `Player ${game.landers.length + 1}`}
+            onJoin={opts => {
+              maybeSavePlayerName(opts.name);
+              engine.joinGame(opts);
+            }}
+          />
+        </DialogTrigger>
       )}
-      <FullScreenButton isFull={isFull} setFull={setFull} />
+      <MenuTrigger>
+        <Button aria-label="Menu"><FontAwesomeIcon icon={faBars} /></Button>
+        <Popover placement="bottom right">
+          <Menu onAction={(action) => {
+            if (action === "start-private-game") {
+              router.push(`/${makeShortId()}`)
+            } else if (action === "restart-game") {
+              setResetOpen(true);
+            } else if (action === "toggle-full-screen") {
+              toggleFullScreen();
+            }
+          }}>
+            {engine.isPlaying && (
+              <MenuItem id="restart-game">
+                Reset this game
+              </MenuItem>
+            )}
+            {roomId === "public" && (
+              <MenuItem id="start-private-game">
+                Start private game
+              </MenuItem>
+            )}
+            {isTouchDevice() && (
+              <MenuItem id="toggle-full-screen">
+                {isFullScreen ? "Exit fullscreen mode" : "Fullscreen mode"}
+              </MenuItem>
+            )}
+          </Menu>
+        </Popover>
+      </MenuTrigger>
+
+      {resetOpen && (
+        <ResetGameDialog
+          isOpen
+          onStart={(options) => {
+            engine.resetGame(options, { preserveMap: false, preserveScores: false});
+          }}
+          onClose={() => {
+            setResetOpen(false);
+            blurActive();
+          }}
+        />
+      )}
     </div>
   );
 });
@@ -121,7 +155,7 @@ const MajorGameMessage = observer(function MajorGameMessage(props: {
           <Heading slot="title">{engine.resetPending.cause === "requested" ? "Starting new game" : "Restarting"} in <TimerTill target={engine.resetPending.resetTimestamp}/>s...</Heading>
           {engine.resetPending.cause === "requested" && (
             <div>
-              <Button onPress={() => engine.cancelResetGame()}>Cancel!</Button>
+              <Button autoFocus onPress={() => engine.cancelResetGame()}>Cancel!</Button>
             </div>
           )}
         </div>
@@ -455,33 +489,31 @@ const KeyboardKey = observer(function KeyboardKey(props: {
   );
 }, {forwardRef: true})
 
-function FullScreenButton(props: {
-  isFull: boolean;
-  setFull: (full: boolean) => void;
-}) {
-  const { isFull, setFull } = props;
+function useToggleFullScreen() {
+  const [isFull, setFull] = React.useState(false);
 
-  if (!isTouchDevice()) {
-    return null;
-  }
+  React.useEffect(() => {
+    const handler = () => {
+      setFull(isFullScreenMode());
+    };
+    document.addEventListener("fullscreenchange", handler);
+    return () => {
+      document.removeEventListener("fullscreenchange", handler);
+    }
+  }, [])
 
-  return (
-    <Button size="small"
-      onPress={async () => {
-        if (isFull) {
-          document.exitFullscreen();
-          setFull(false);
-        } else {
-          const app = document.getElementsByClassName("app")[0];
-          if (app) {
-            await app.requestFullscreen();
-            setFull(true);
-          }
-        }
-      }}
-    >
-      <FontAwesomeIcon icon={isFull ? faMinimize : faMaximize} />
-    </Button>
-  )
-
+  return {
+    isFullScreen: isFull,
+    toggleFullScreen: async () => {
+      if (isFull) {
+        document.exitFullscreen();
+        setFull(false);
+        return false;
+      } else {
+        await document.body.requestFullscreen();
+        setFull(true);
+        return true;
+      }
+    }
+  };
 }

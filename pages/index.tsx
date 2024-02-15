@@ -9,7 +9,7 @@ const makeId = customAlphabet('23456789abcdefghijkmnpqrstuvwxyz', 6);
 export default function Home() {
   const router = useRouter();
   useIsomorphicLayoutEffect(() => {
-    router.push(`/${makeId()}`);
+    router.push('/public');
   }, [router]);
   return null;
 }

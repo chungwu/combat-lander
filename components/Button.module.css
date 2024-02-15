@@ -22,6 +22,7 @@
 
 .root:focus-visible {
   outline: none;
+  border-color: var(--control-border-focused);
 }
 
 .large {
