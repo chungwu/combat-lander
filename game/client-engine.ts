@@ -1,4 +1,4 @@
-import { ClientMessage, GameInputEvent, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
+import { ClientMessage, FullSyncMessage, GameInputEvent, PartialSyncMessage, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
 import PartySocket from "partysocket";
 import { GameOptions, LanderGameState } from "./game-state";
 import { BaseLanderEngine } from "./engine";
@@ -83,16 +83,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
           // Message is from the future! Catch up to it
           this.replayTo(msg.time);
         }
-        this.restoreApplyReplay(
-          msg.time,
-          () => {
-            if (msg.type === "full") {
-              this.game.mergeFull(msg.payload);
-            } else {
-              this.game.mergePartial(msg.payload);
-            }
-          }
-        );
+        this.applySyncMessage(msg);
         this.lastSyncTimestep = msg.time;
       } else if (msg.type === "input") {
         if (msg.playerId !== this.playerId) {
@@ -127,6 +118,32 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.resetPending = undefined;
       }
     });
+  }
+
+  private applySyncMessage(msg: FullSyncMessage | PartialSyncMessage) {
+    if (msg.type === "full") {
+      // For a full sync, we make it part of our snapshots history, and
+      // then play forward from there. This avoids the case where we don't
+      // have an existing snapshot with that time step, and so we'd fail
+      // to restoreApplyReplay().
+      this.insertSnapshot({
+        time: msg.time,
+        snapshot: {
+          ...msg.payload,
+          world: msg.payload.world.takeSnapshot()
+        }
+      });
+      // We restore and reply, but don't need to do a merge anymore, as we
+      // started from the snapshot we just created.
+      this.restoreApplyReplay(msg.time, () => 0);
+    } else {
+      this.restoreApplyReplay(
+        msg.time,
+        () => {
+          this.game.mergePartial(msg.payload);
+        }
+      );
+    }
   }
 
   timerStep() {

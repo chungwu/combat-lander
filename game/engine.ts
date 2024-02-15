@@ -89,16 +89,23 @@ export class BaseLanderEngine {
       time: this.timestep,
       snapshot: this.game.takeSnapshot()
     };
-    if (this.snapshots.length > 0 && this.timestep <= this.snapshots[this.snapshots.length - 1].time) {
-      const index = this.snapshots.findIndex(s => s.time >= this.timestep);
+    this.insertSnapshot(snapshot);
+  }
+
+  protected insertSnapshot(snapshot: GameSnapshot) {
+    if (this.snapshots.length > 0 && snapshot.time <= this.snapshots[this.snapshots.length - 1].time) {
+      // The time for the snapshot is before the latest snapshot we have
+      const index = this.snapshots.findIndex(s => s.time >= snapshot.time);
       assert(index >= 0);
-      if (this.snapshots[index].time === this.timestep) {
+      if (this.snapshots[index].time === snapshot.time) {
         this.snapshots[index] = snapshot;
       } else {
         this.snapshots.splice(index, 0, snapshot);
       }
+      return index;
     } else {
       this.snapshots.push(snapshot);
+      return this.snapshots.length - 1;
     }
   }
 
