@@ -20,6 +20,16 @@ export function Room(props: {
     JOYSTICK_CONFIG.scheme = flags.joystick as any;
   }
 
+  React.useEffect(() => {
+    if (isTouchDevice()) {
+      // Request full screen mode for touch devices
+      const app = document.getElementsByClassName("app")[0];
+      if (app) {
+        app.requestFullscreen();
+      }
+    }
+  }, []);
+
   return (
     <div className={sty.root}>
       {game && engine && (
