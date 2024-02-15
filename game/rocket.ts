@@ -1,6 +1,6 @@
 import { Collider, ColliderDesc, Cuboid, RigidBodyDesc, Vector2, World } from "@dimforge/rapier2d";
 import { GameObject } from "./objects/game-object";
-import { LanderGameState } from "./game-state";
+import { GameOptions, LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
 import pick from "lodash/pick";
 import { nanoid } from "nanoid";
@@ -62,8 +62,8 @@ export class Rocket extends GameObject {
     this.color = opts.color;
   }
 
-  postStep(dt: number, timestep: number) {
-    super.postStep(dt, timestep);
+  postStep(dt: number, timestep: number, options: GameOptions) {
+    super.postStep(dt, timestep, options);
     this.aliveSteps += 1;
   }
 
