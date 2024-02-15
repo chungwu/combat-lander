@@ -228,11 +228,14 @@ export class CanvasRenderer {
       this.viewport.left = Math.min(this.viewport.left, selfLander.translation.x - marginX);
       this.viewport.right = Math.max(this.viewport.right, selfLander.translation.x + marginX);
 
-      const marginYTop = this.viewport.screenHeightInWorldPixels * 0.1;
+      const marginYTop = this.viewport.screenHeightInWorldPixels * 0.2;
       this.viewport.top = Math.min(this.viewport.top, (this.viewport.worldHeight - selfLander.translation.y) - marginYTop);
       
-      const marginYBottom = this.viewport.screenHeightInWorldPixels * 0.75;
-      this.viewport.bottom = Math.max(this.viewport.bottom, (this.viewport.worldHeight - selfLander.translation.y) + marginYBottom, 0);
+      const marginYBottom = this.viewport.screenHeightInWorldPixels * 0.6;
+      this.viewport.bottom = Math.min(this.viewport.worldHeight, Math.max(
+        this.viewport.bottom, 
+        (this.viewport.worldHeight - selfLander.translation.y) + marginYBottom,
+      ));
 
     } else {
       this.viewport.scaled = minZoom;

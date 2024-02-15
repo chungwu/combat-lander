@@ -102,7 +102,7 @@ export const PARTIAL_SYNC_FREQ = 60; // once per second
 export const SERVER_SNAPSHOT_GC_FREQ = 60 * 30; // every 30 seconds
 export const SERVER_SNAPSHOT_FREQ = 10; // save snapshot every 10 steps
 
-export const CLIENT_SNAPSHOT_GC_FREQ = 60 * 60; // gc every minute
+export const CLIENT_SNAPSHOT_GC_FREQ = 60 * 1; // gc every second
 export const CLIENT_SNAPSHOT_FREQ = 1; // save every snapshot
 
 export const JOYSTICK_CONFIG: {use: boolean, scheme: "keyboard" | "angled" | "mixed", threshold: number} = {

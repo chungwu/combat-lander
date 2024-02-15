@@ -208,7 +208,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
 
     // Garbage collect snapshots every minute
     if (this.timestep % SERVER_SNAPSHOT_GC_FREQ === 0) {
-      this.garbageCollect(SERVER_SNAPSHOT_GC_FREQ);
+      this.garbageCollect(this.timestep - SERVER_SNAPSHOT_GC_FREQ);
     }
 
     this.shouldImmediatelyBroadcastSync = false;

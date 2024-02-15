@@ -21,6 +21,8 @@ export function isServer() {
 
 export type ArrayElementType<T> = T extends (infer U)[] ? U : never;
 
+export type ExtractByType<T, U> = T extends { type: infer V } ? (U extends V ? T : never) : never;
+
 export function isTouchDevice() {
   return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || ((navigator as any).msMaxTouchPoints > 0);
 }

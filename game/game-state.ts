@@ -86,7 +86,7 @@ export class LanderGameState {
     if (this.winnerPlayerId) {
       return;
     }
-    
+
     const world = this.world;
     const dt = world.timestep;
     for (const steppable of this.steppables()) {
@@ -247,6 +247,21 @@ export class LanderGameState {
     };
   }
 
+  mergeSnapshot(snapshot: ReturnType<typeof this.takeSnapshot>) {
+    const snapshot2 = {
+      ...snapshot,
+      world: World.restoreSnapshot(snapshot.world)
+    };
+    this.mergeFull(snapshot2);
+  }
+
+  takeSnapshot() {
+    return {
+      ...this.serializeFull(),
+      world: this.world.takeSnapshot()
+    }
+  }
+
   serializePartial() {
     return {
       id: this.id,
@@ -285,9 +300,11 @@ export class LanderGameState {
 
     this.winnerPlayerId = payload.winnerPlayerId;
     this.playerWins = payload.playerWins;
+    prevWorld.free();
   }
 
   mergePartial(payload: ReturnType<typeof this.serializePartial>) {
+    const prevWorld = this.world;
     this.id = payload.id;
     this.world = payload.world;
     this.ground.updateCollider(this.world, this.ground.handle);
@@ -297,6 +314,7 @@ export class LanderGameState {
     for (const pad of this.landingPads) {
       pad.updateCollider(this.world, pad.handle);
     }
+    prevWorld.free();
   }
 
   mergeMeta(payload: ReturnType<typeof this.serializeMeta>) {

@@ -134,7 +134,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
   
       // Garbage collect snapshots
       if (this.timestep % CLIENT_SNAPSHOT_GC_FREQ === 0) {
-        this.garbageCollect(CLIENT_SNAPSHOT_GC_FREQ);
+        this.garbageCollect(this.lastSyncTimestep);
       }
     });
   }

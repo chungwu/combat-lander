@@ -4,6 +4,9 @@ import { JOYSTICK_CONFIG } from "./constants";
 import { IJoystickUpdateEvent } from "react-joystick-component/build/lib/Joystick";
 import { normalizeAngle, vectorMagnitude } from "@/utils/math";
 import { Vector2 } from "@dimforge/rapier2d";
+import { GameInputEvent } from "@/messages";
+import assert from "assert";
+import { ExtractByType } from "@/utils/utils";
 
 export interface PseudoKeyboardEvent {
   type: "keyup" | "keydown" | "keypress";
@@ -13,11 +16,11 @@ export interface PseudoKeyboardEvent {
 export type KeyEventListener = (event: PseudoKeyboardEvent) => void;
 
 export class KeyboardController {
-  pressingUp = false;
-  pressingDown = false;
-  pressingLeft = false;
-  pressingRight = false;
-  private joystickActive = false;
+  private pressingUp = false;
+  private pressingDown = false;
+  private pressingLeft = false;
+  private pressingRight = false;
+  private lastJoystickMsg: ExtractByType<GameInputEvent, "joystick"> | undefined = undefined;
   private listeners: KeyEventListener[] = [];
   constructor(private engine: ClientLanderEngine) {
 
@@ -84,7 +87,6 @@ export class KeyboardController {
 
     const arrowKey = this.deriveArrowKeyDirection(event.key);
     if (arrowKey && lander.isAlive()) {
-      console.log("KEY DOWN", arrowKey);
       if (arrowKey === "up" && !this.pressingDown) {
         this.pressingDown = true;
         this.engine.processLocalInput({
@@ -106,6 +108,7 @@ export class KeyboardController {
           type: "rotate", dir: "right", active: true
         });
       }
+      this.lastJoystickMsg = undefined;
     }
   }
 
@@ -116,7 +119,6 @@ export class KeyboardController {
     }
     const arrowKey = this.deriveArrowKeyDirection(event.key);
     if (arrowKey && lander.isAlive()) {
-      console.log("KEY UP", arrowKey);
       if (arrowKey === "up" && this.pressingDown) {
         this.pressingDown = false;
         this.engine.processLocalInput({
@@ -138,6 +140,7 @@ export class KeyboardController {
           type: "rotate", dir: "right", active: false
         });
       }
+      this.lastJoystickMsg = undefined;
     }
   }
 
@@ -212,8 +215,24 @@ export class KeyboardController {
         }
         let magnitude = (Math.abs(val) - actionThreshold) / (1 - actionThreshold);
         magnitude = magnitude * (val > 0 ? 1 : -1);
-        return Math.round(magnitude * 10000) / 10000;
+        return Math.round(magnitude * 100) / 100;
       };
+
+      const maybeProcessJoystickEvent = (event: ExtractByType<GameInputEvent, "joystick">) => {
+        // Sends joystick event to engine if it differs from the last event
+        // we sent, to avoid flooding the server with events
+        if (
+          !this.lastJoystickMsg ||
+          this.lastJoystickMsg.rotatingLeft != event.rotatingLeft ||
+          this.lastJoystickMsg.rotatingRight != event.rotatingRight ||
+          this.lastJoystickMsg.targetRotation != event.targetRotation ||
+          this.lastJoystickMsg.targetThrottle != event.targetThrottle
+        ) {
+          this.lastJoystickMsg = event;
+          this.engine.processLocalInput(event);
+        }
+      };
+
       if (JOYSTICK_CONFIG.scheme === "mixed") {
         const normY = normed(event.y!);
         const normX = normed(event.x!);
@@ -221,7 +240,7 @@ export class KeyboardController {
           return;
         }
         const targetThrottle = normY == null ? lander.throttle : normY < 0 ? 0 : normY;
-        this.engine.processLocalInput({
+        maybeProcessJoystickEvent({
           type: "joystick", 
           targetThrottle,
           targetRotation: null,
@@ -240,7 +259,7 @@ export class KeyboardController {
           targetRotation = clamp(targetRotation, -0.5 * Math.PI, 0.5 * Math.PI);
         }
         const targetThrottle = (normY ?? 0) <= 0 ? 0 : vectorMagnitude(new Vector2(normX ?? 0, normY ?? 0));
-        this.engine.processLocalInput({
+        maybeProcessJoystickEvent({
           type: "joystick",
           targetThrottle, targetRotation, rotatingLeft: null, rotatingRight: null
         });

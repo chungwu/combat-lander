@@ -2,6 +2,7 @@ import { FullSerializedGameState, GameInputEvent, PlayerInputMessage } from "@/m
 import { LanderGameState } from "./game-state";
 import { PACKR } from "./packr";
 import assert from "assert";
+import { World } from "@dimforge/rapier2d";
 
 export class BaseLanderEngine {
   protected initialTimeStep = 0;
@@ -73,20 +74,14 @@ export class BaseLanderEngine {
   }
 
   protected applyPlayerInputsAt(pred: (msg: PlayerInputMessage) => boolean) {
-    this.applyPlayerInputs(this.getPlayerInputsAt(pred));
-  }
-  
-  protected applyPlayerInputs(msgs: PlayerInputMessage[]) {
-    for (const msg of msgs) {
-      console.log(`[${this.timestep}] APPLYING PLAYER INPUT ${msg.playerId.slice(0, 4)} ${msg.time} ${JSON.stringify(msg.event)}`);
-      this.applyPlayerInput(msg.playerId, msg.event);
+    for (const msg of this.playerInputs) {
+      if (pred(msg)) {
+        console.log(`[${this.timestep}] APPLYING PLAYER INPUT ${msg.playerId.slice(0, 4)} ${msg.time} ${JSON.stringify(msg.event)}`);
+        this.applyPlayerInput(msg.playerId, msg.event);
+      }
     }
   }
-
-  protected getPlayerInputsAt(pred: (msg: PlayerInputMessage) => boolean) {
-    return this.playerInputs.filter(x => pred(x));
-  }
-
+  
   protected applyPlayerInput(playerId: string, event: GameInputEvent) {
     this.game.applyPlayerInput(playerId, event, this.timestep);
   }
@@ -94,7 +89,7 @@ export class BaseLanderEngine {
   protected saveSnapshot() {
     const snapshot = {
       time: this.timestep,
-      snapshot: PACKR.pack(this.game.serializeFull())
+      snapshot: this.game.takeSnapshot()
     };
     if (this.snapshots.length > 0 && this.timestep <= this.snapshots[this.snapshots.length - 1].time) {
       const index = this.snapshots.findIndex(s => s.time >= this.timestep);
@@ -110,9 +105,8 @@ export class BaseLanderEngine {
   }
 
   protected restoreSnapshot(snapshot: GameSnapshot) {
-    const game = PACKR.unpack(snapshot.snapshot) as FullSerializedGameState;
-    console.log(`[${this.timestep}] Restoring to ${snapshot.time}`, game);
-    this.game.mergeFull(game);
+    console.log(`[${this.timestep}] Restoring to ${snapshot.time}`);
+    this.game.mergeSnapshot(snapshot.snapshot);
     this.timestep = snapshot.time;
   }
 
@@ -154,8 +148,7 @@ export class BaseLanderEngine {
   /**
    * Removes snapshots or player inputs older than `lookback` steps
    */
-  protected garbageCollect(lookback: number) {
-    const oldestKept = this.timestep - lookback;
+  protected garbageCollect(oldestKept: number) {
     trimByTime(this.snapshots, oldestKept);
     trimByTime(this.playerInputs, oldestKept);
   }
@@ -164,7 +157,7 @@ export class BaseLanderEngine {
 
 interface GameSnapshot {
   time: number;
-  snapshot: Buffer;
+  snapshot: ReturnType<typeof LanderGameState.prototype.takeSnapshot>;
 }
 
 
