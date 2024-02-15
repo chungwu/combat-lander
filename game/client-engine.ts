@@ -30,7 +30,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   private sendMessage(msg: ClientMessage) {
-    console.log(`[${this.timestep}] SENDING: ${msg.type} @ ${msg.time}`)
+    console.log(`[${this.timestep}] SENDING: ${msg.type} @ ${msg.time}: ${msg.type === "input" ? JSON.stringify(msg.event) : ""}`)
     this.socket.send(JSON.stringify(msg));
   }
 
@@ -53,7 +53,6 @@ export class ClientLanderEngine extends BaseLanderEngine {
         gameId: this.game.id,
         event
       } as const;
-      console.log(`[${this.timestep}] LOCAL EVENT`, msg);
       this.savePlayerEvent(msg);
       this.sendMessage(msg);
     }

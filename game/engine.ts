@@ -74,7 +74,7 @@ export class BaseLanderEngine {
   protected applyPlayerInputsAt(pred: (msg: PlayerInputMessage) => boolean) {
     for (const msg of this.playerInputs) {
       if (pred(msg)) {
-        console.log(`[${this.timestep}] APPLYING PLAYER INPUT ${msg.playerId.slice(0, 4)} ${msg.time} ${JSON.stringify(msg.event)}`);
+        console.log(`[${this.timestep}] APPLYING PLAYER INPUT ${msg.playerId.slice(0, 4)}@${msg.time} ${JSON.stringify(msg.event)}`);
         this.applyPlayerInput(msg.playerId, msg.event);
       }
     }
