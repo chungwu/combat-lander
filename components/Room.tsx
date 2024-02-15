@@ -6,6 +6,7 @@ import { ClientEngineProvider } from "./contexts";
 import { useRouter } from "next/router";
 import { JOYSTICK_CONFIG } from "@/game/constants";
 import { isTouchDevice } from "@/utils/utils";
+import React from "react";
 
 export function Room(props: {
   roomId: string
@@ -18,6 +19,11 @@ export function Room(props: {
     JOYSTICK_CONFIG.use = true;
     JOYSTICK_CONFIG.scheme = flags.joystick as any;
   }
+
+  React.useEffect(() => {
+    // Try to nudge url bar out of the way on mobile :-/
+    window.scrollTo(0, 1);
+  }, []);
 
   return (
     <div className={sty.root}>

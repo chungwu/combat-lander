@@ -366,7 +366,7 @@ const JoystickOverlay = observer(function JoystickOverlay(props: {
           const nextPos = controller.handleJoystickStop();
           setPos(nextPos);
         }}
-        size={200}
+        size={150}
       />
     </div>
   )
