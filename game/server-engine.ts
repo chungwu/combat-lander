@@ -211,7 +211,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
         this.broadcast(this.makeResetPendingMessage(this.game.winnerPlayerId ? "won" : "dead", this.resetTimestamp));
         setTimeout(() => {
           if (this.resetTimestamp != undefined) {
-            this.resetGame(this.game.options, { preserveMap: true, preserveScores: true});
+            this.resetGame(this.game.options, { preserveMap: false, preserveScores: true});
           }
         }, waitTime);
       }
