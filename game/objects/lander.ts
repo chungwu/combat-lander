@@ -6,7 +6,8 @@ import { normalizeAngle, rotateVector, vectorMagnitude } from "@/utils/math";
 import pick from "lodash/pick";
 import { GameInputEvent } from "@/messages";
 import assert from "assert";
-import { action, makeObservable, observable } from "mobx";
+import { makeObservable, observable } from "mobx";
+import cloneDeep from "lodash/cloneDeep";
 
 interface LanderOpts {
   id: string;
@@ -74,7 +75,6 @@ export class Lander extends GameObject {
   static createFrom(
     world: World, 
     payload: ReturnType<typeof Lander.prototype.serialize>,
-    gameOptions: GameOptions,
   ) {
     const collider = world.getCollider(payload.handle);
     const lander = new Lander(
@@ -105,7 +105,11 @@ export class Lander extends GameObject {
   serialize() {
     return {
       handle: this.handle,
-      ...pick(this, ...SERIALIZED_FIELDS),
+
+      // We use cloneDeep here as some of the fields are not primitives but
+      // objects (rocketState, etc) and may be directly mutated, so we clone 
+      // them so that the snapshots are not affected by mutations
+      ...cloneDeep(pick(this, ...SERIALIZED_FIELDS)),
     };
   }
 

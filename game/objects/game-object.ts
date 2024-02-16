@@ -58,7 +58,6 @@ export abstract class GameObject {
   }
 
   maybeRemove(game: LanderGameState) {
-    assert(isServer(), `Can only remove game objects on the server`);
     return false;
   }
 }

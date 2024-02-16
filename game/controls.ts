@@ -7,6 +7,7 @@ import { Vector2 } from "@dimforge/rapier2d";
 import { GameInputEvent } from "@/messages";
 import assert from "assert";
 import { ExtractByType } from "@/utils/utils";
+import { nanoid } from "nanoid";
 
 export interface PseudoKeyboardEvent {
   type: "keyup" | "keydown" | "keypress";
@@ -152,11 +153,11 @@ export class KeyboardController {
     if (this.selfLander.isAlive()) {
       if (event.key === "q") {
         this.engine.processLocalInput({
-          type: "fire-rocket", rocketType: "small"
+          type: "fire-rocket", rocketType: "small", id: nanoid(),
         });
       } else if (event.key === "w") {
         this.engine.processLocalInput({
-          type: "fire-rocket", rocketType: "big"
+          type: "fire-rocket", rocketType: "big", id: nanoid(),
         });
       }
     }

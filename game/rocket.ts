@@ -3,7 +3,6 @@ import { GameObject } from "./objects/game-object";
 import { GameOptions, LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
 import pick from "lodash/pick";
-import { nanoid } from "nanoid";
 import pull from "lodash/pull";
 import { ROCKET_STATS, RocketType, getLanderColor } from "./constants";
 
@@ -24,6 +23,7 @@ export class Rocket extends GameObject {
   public color: string;
 
   static create(game: LanderGameState, lander: Lander, opts: {
+    id: string;
     rocketType: RocketType;
   }) {
     const type = opts.rocketType;
@@ -34,6 +34,7 @@ export class Rocket extends GameObject {
     const colliderDesc = ColliderDesc.cuboid(rocketSize, rocketSize).setRestitution(0.9).setDensity(1);
     const collider = game.world.createCollider(colliderDesc, body);
     return new Rocket(collider, {
+      id: opts.id,
       ownerLanderId:  lander.id,
       rocketType: opts.rocketType,
       color: getLanderColor(lander.color, 7)
@@ -45,18 +46,17 @@ export class Rocket extends GameObject {
     if (!collider) {
       throw new Error(`NO COLLIDER FOUND!!! ${fromRocket.handle}`)
     }
-    console.log(`CREATED ROCKET`, fromRocket.handle, fromRocket);
     return new Rocket(collider, fromRocket);
   }
 
   constructor(collider: Collider, opts: {
-    id?: string;
+    id: string;
     ownerLanderId: string;
     rocketType: RocketType;
     color: string;
   }) {
     super(collider);
-    this.id = opts.id ?? nanoid();
+    this.id = opts.id;
     this.ownerLanderId = opts.ownerLanderId;
     this.rocketType = opts.rocketType;
     this.color = opts.color;

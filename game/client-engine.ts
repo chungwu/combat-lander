@@ -36,8 +36,11 @@ export class ClientLanderEngine extends BaseLanderEngine {
 
   protected applyPlayerInput(playerId: string, event: GameInputEvent): void {
     if (event.type === "fire-rocket") {
-      // We don't apply fire-rocket events in the client, as that is handled
-      // by the server
+      // We only apply fire-rocket locally; we depend on 
+      // server syncs to get other player's rockets
+      if (playerId === this.playerId) {
+        super.applyPlayerInput(playerId, event);
+      }
     } else {
       super.applyPlayerInput(playerId, event);
     }
@@ -193,6 +196,11 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.garbageCollect(this.lastSyncTimestep);
       }
     });
+  }
+
+  protected postStepOne(): void {
+    super.postStepOne();
+    this.game.maybeRemoveObjects();    
   }
 
   get playerId() {

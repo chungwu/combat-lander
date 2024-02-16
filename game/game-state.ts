@@ -55,7 +55,7 @@ export class LanderGameState {
       Ground.createFrom(world, payload.ground),
       Sky.createFrom(world, payload.sky),
       payload.landingPads.map((padPayload, i) => LandingPad.createFrom(world, moon, i, padPayload)),
-      payload.landers.map(l => Lander.createFrom(world, l, payload.options)),
+      payload.landers.map(l => Lander.createFrom(world, l)),
       payload.rockets.map(r => Rocket.createFrom(world, r)),
       payload.options
     );
@@ -142,7 +142,6 @@ export class LanderGameState {
   }
 
   maybeRemoveObjects() {
-    assert(isServer(), `Can only remove game objects on the server`);
     let removed = false;
     for (const steppable of this.steppables()) {
       if (steppable.maybeRemove(this)) {
@@ -165,10 +164,9 @@ export class LanderGameState {
     const lander = this.landers.find(l => l.id === playerId);
     if (lander && lander.isAlive()) {
       if (event.type === "fire-rocket") {
-        assert(isServer(), "Can only handle fire-rocket on the server");
         if (lander.rocketState[event.rocketType].count > 0) {
           const rocket = Rocket.create(
-            this, lander, { rocketType: event.rocketType, }
+            this, lander, { rocketType: event.rocketType, id: event.id }
           );
           this.rockets.push(rocket);
           this.fireRocket(lander, rocket);
@@ -327,7 +325,7 @@ export class LanderGameState {
     this.mergeObjects(
       "landers",
       fromLanders,
-      (fromLander) => Lander.createFrom(this.world, fromLander, this.options)
+      (fromLander) => Lander.createFrom(this.world, fromLander)
     );
   }
 
