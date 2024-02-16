@@ -126,6 +126,25 @@
   opacity: 0.5;
 }
 
+.joystickDuoOverlay {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 48px 24px 32px;
+  left: 0;
+  bottom: 0;
+  justify-content: space-between;
+}
+
+.joystickX [data-testid="joystick-base"] {
+  height: 10px !important;
+}
+
+.joystickY [data-testid="joystick-base"] {
+  width: 10px !important;
+}
+
 .keyboardControlsOverlay {
   position: absolute;
   bottom: 0;
@@ -143,10 +162,19 @@
   gap: 16px;
 }
 
+.weaponControlsOverlayMiddle {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .weaponRow {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.weaponControlsOverlayMiddle .weaponRow {
+  flex-direction: column;
 }
 
 .ammos {

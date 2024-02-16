@@ -12,7 +12,7 @@ import { observer } from "mobx-react-lite";
 import { useRouter } from "next/router";
 import React from "react";
 import { Button as BaseButton, DialogTrigger, Heading, MenuTrigger } from "react-aria-components";
-import { Joystick } from "react-joystick-component";
+import { Joystick, JoystickShape } from "react-joystick-component";
 import { Button } from "./Button";
 import sty from "./GameOverlay.module.css";
 import { JoinGameDialog } from "./JoinGameDialog";
@@ -248,26 +248,32 @@ const DamageFlasher = observer(function DamageFlasher(props: {
 const KeyboardControlsOverlay = observer(function KeyboardOverlay(props: {
 }) {
   const engine = useClientEngine();
+  console.log("SCHEME", JOYSTICK_CONFIG.scheme);
+  const useDuo = JOYSTICK_CONFIG.use && JOYSTICK_CONFIG.scheme === "duo";
   return (
     <div className={sty.keyboardControlsOverlay}>
       {engine.isPlaying && 
         <>
-          {JOYSTICK_CONFIG.use ? <JoystickOverlay /> : <ArrowKeysOverlay />}
-          <WeaponControlsOverlay />
+          {JOYSTICK_CONFIG.use ? (
+            useDuo ? <DuoJoystickOverlay /> :
+            <JoystickOverlay /> 
+): <ArrowKeysOverlay />}
+          <WeaponControlsOverlay middle={useDuo} />
         </>
       }
     </div>
   )
 });
 
-const WeaponControlsOverlay = observer(function WeaponControlsOverlay() {
+const WeaponControlsOverlay = observer(function WeaponControlsOverlay(props: {middle?: boolean}) {
+  const { middle } = props;
   const engine = useClientEngine();
   const lander = engine.selfLander;
   if (!lander) {
     return null;
   }
   return (
-    <div className={sty.weaponControlsOverlay}>
+    <div className={classNames(sty.weaponControlsOverlay, {[sty.weaponControlsOverlayMiddle]: middle})}>
       <div className={sty.weaponRow}>
         <div className={sty.weaponRowKey}>
           <KeyboardKey keyboardKey="q">q</KeyboardKey>
@@ -388,9 +394,7 @@ const ArrowKeysOverlay = observer(function ArrowKeysOverlay(props: {
 });
 
 
-const JoystickOverlay = observer(function JoystickOverlay(props: {
-
-}) {
+const JoystickOverlay = observer(function JoystickOverlay() {
   const engine = useClientEngine();
   const [ pos, setPos ] = React.useState<{x: number, y: number}|undefined>(undefined);
   const controller = engine.controller;
@@ -408,6 +412,48 @@ const JoystickOverlay = observer(function JoystickOverlay(props: {
         }}
         size={150}
       />
+    </div>
+  )
+});
+
+const DuoJoystickOverlay = observer(function JoystickOverlay() {
+  const engine = useClientEngine();
+  const [ y, setY ] = React.useState<number>(0);
+  const controller = engine.controller;
+  return (
+    <div className={classNames(sty.joystickOverlay, sty.joystickDuoOverlay)}>
+      <div className={sty.joystickX}>
+        <Joystick 
+          controlPlaneShape={JoystickShape.AxisX}
+          stickColor={getLanderColor(ensure(engine.selfLander).color, 8)}
+          move={event => {
+            controller.handleJoystickMove({x: event.x ?? 0, y: null});
+          }}
+          stop={event => {
+            controller.handleJoystickStop();
+          }}
+          size={100}
+          stickSize={50}
+        />
+      </div>
+      <div className={sty.joystickY}>
+        <Joystick 
+          controlPlaneShape={JoystickShape.AxisY}
+          stickColor={getLanderColor(ensure(engine.selfLander).color, 8)}
+          move={event => {
+            controller.handleJoystickMove({x: null, y: event.y ?? 0});
+          }}
+          pos={{x: 0, y}}
+          stop={event => {
+            const nextPos = controller.handleJoystickStop();
+            if (nextPos) {
+              setY(nextPos.y);
+            }
+          }}
+          size={100}
+          stickSize={50}
+        />
+      </div>
     </div>
   )
 });

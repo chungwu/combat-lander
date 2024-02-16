@@ -169,7 +169,7 @@ export class KeyboardController {
     return undefined;
   }
 
-  handleJoystickMove(event: IJoystickUpdateEvent) {
+  handleJoystickMove(event: { x: number | null, y: number | null }) {
     const lander = this.engine.selfLander;
     if (!lander) {
       return;
@@ -218,21 +218,6 @@ export class KeyboardController {
         return Math.round(magnitude * 100) / 100;
       };
 
-      const maybeProcessJoystickEvent = (event: ExtractByType<GameInputEvent, "joystick">) => {
-        // Sends joystick event to engine if it differs from the last event
-        // we sent, to avoid flooding the server with events
-        if (
-          !this.lastJoystickMsg ||
-          this.lastJoystickMsg.rotatingLeft != event.rotatingLeft ||
-          this.lastJoystickMsg.rotatingRight != event.rotatingRight ||
-          this.lastJoystickMsg.targetRotation != event.targetRotation ||
-          this.lastJoystickMsg.targetThrottle != event.targetThrottle
-        ) {
-          this.lastJoystickMsg = event;
-          this.engine.processLocalInput(event);
-        }
-      };
-
       if (JOYSTICK_CONFIG.scheme === "mixed") {
         const normY = normed(event.y!);
         const normX = normed(event.x!);
@@ -240,7 +225,7 @@ export class KeyboardController {
           return;
         }
         const targetThrottle = normY == null ? lander.throttle : normY < 0 ? 0 : normY;
-        maybeProcessJoystickEvent({
+        this.maybeProcessJoystickEvent({
           type: "joystick", 
           targetThrottle,
           targetRotation: null,
@@ -259,11 +244,49 @@ export class KeyboardController {
           targetRotation = clamp(targetRotation, -0.5 * Math.PI, 0.5 * Math.PI);
         }
         const targetThrottle = (normY ?? 0) <= 0 ? 0 : vectorMagnitude(new Vector2(normX ?? 0, normY ?? 0));
-        maybeProcessJoystickEvent({
+        this.maybeProcessJoystickEvent({
           type: "joystick",
           targetThrottle, targetRotation, rotatingLeft: null, rotatingRight: null
         });
+      } else if (JOYSTICK_CONFIG.scheme === "duo") {
+        if (event.x != null) {
+          const normX = normed(event.x, 0.2);
+          this.maybeProcessJoystickEvent({
+            type: "joystick",
+            targetThrottle: lander.throttle,
+            targetRotation: null,
+            ...this.lastJoystickMsg,
+            rotatingLeft: normX != null && normX < 0,
+            rotatingRight: normX != null && normX > 0,
+          });
+        } else if (event.y != null) {
+          const normY = normed(event.y);
+          const targetThrottle = normY == null ? lander.throttle : normY < 0 ? 0 : normY;
+          this.maybeProcessJoystickEvent({
+            type: "joystick",
+            targetRotation: null,
+            rotatingLeft: false,
+            rotatingRight: false,
+            ...this.lastJoystickMsg,
+            targetThrottle
+          });
+        }
       }
+    }
+  }
+
+  private maybeProcessJoystickEvent(event: ExtractByType<GameInputEvent, "joystick">) {
+    // Sends joystick event to engine if it differs from the last event
+    // we sent, to avoid flooding the server with events
+    if (
+      !this.lastJoystickMsg ||
+      this.lastJoystickMsg.rotatingLeft != event.rotatingLeft ||
+      this.lastJoystickMsg.rotatingRight != event.rotatingRight ||
+      this.lastJoystickMsg.targetRotation != event.targetRotation ||
+      this.lastJoystickMsg.targetThrottle != event.targetThrottle
+    ) {
+      this.lastJoystickMsg = event;
+      this.engine.processLocalInput(event);
     }
   }
 
@@ -287,7 +310,7 @@ export class KeyboardController {
         this.handleKeyEvent({type: "keyup", key: "ArrowRight"});
       }
     } else if (JOYSTICK_CONFIG.scheme === "mixed") {
-      this.engine.processLocalInput({
+      this.maybeProcessJoystickEvent({
         type: "joystick",
         targetThrottle: lander.throttle,
         rotatingLeft: false,
@@ -299,13 +322,25 @@ export class KeyboardController {
         y: lander.throttle === 0 ? 0 : lander.throttle * (1 - JOYSTICK_CONFIG.threshold) + JOYSTICK_CONFIG.threshold
       }
     } else if (JOYSTICK_CONFIG.scheme === "angled") {
-      this.engine.processLocalInput({
+      this.maybeProcessJoystickEvent({
         type: "joystick",
         targetThrottle: 0,
         rotatingLeft: false,
         rotatingRight: false,
         targetRotation: null
       });
+    } else if (JOYSTICK_CONFIG.scheme === "duo") {
+      this.maybeProcessJoystickEvent({
+        type: "joystick",
+        targetThrottle: lander.throttle,
+        rotatingLeft: false,
+        rotatingRight: false,
+        targetRotation: null
+      });
+      return {
+        x: 0,
+        y: lander.throttle === 0 ? 0 : lander.throttle * (1 - JOYSTICK_CONFIG.threshold) + JOYSTICK_CONFIG.threshold
+      }
     }
   }
 }

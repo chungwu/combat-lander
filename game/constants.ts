@@ -25,7 +25,7 @@ export const LANDING_PAD_STATS = {
 
 // Lander mechanics
 export const LANDER_RADIUS = 10;
-export const TURN_RATE = 1; // rad/s
+export const TURN_RATE = Math.PI * 0.5; // rad/s
 export const THROTTLE_RATE = 2;
 export const FULL_THROTTLE_FORCE = 50000;
 export const THROTTLE_FUEL_BURN_RATE = 3;
@@ -105,7 +105,7 @@ export const SERVER_SNAPSHOT_FREQ = 1; // save every snapshot
 export const CLIENT_SNAPSHOT_GC_FREQ = 60 * 1; // gc every second
 export const CLIENT_SNAPSHOT_FREQ = 1; // save every snapshot
 
-export const JOYSTICK_CONFIG: {use: boolean, scheme: "keyboard" | "angled" | "mixed", threshold: number} = {
+export const JOYSTICK_CONFIG: {use: boolean, scheme: "keyboard" | "angled" | "mixed" | "duo", threshold: number} = {
   use: false,
   scheme: "angled",
   threshold: 0.1
