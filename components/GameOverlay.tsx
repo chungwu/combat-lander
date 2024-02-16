@@ -418,6 +418,7 @@ const JoystickOverlay = observer(function JoystickOverlay() {
 
 const DuoJoystickOverlay = observer(function JoystickOverlay() {
   const engine = useClientEngine();
+  const [ x, setX ] = React.useState<number>(0);
   const [ y, setY ] = React.useState<number>(0);
   const controller = engine.controller;
   return (
@@ -430,8 +431,12 @@ const DuoJoystickOverlay = observer(function JoystickOverlay() {
             controller.handleJoystickMove({x: event.x ?? 0, y: null});
           }}
           stop={event => {
-            controller.handleJoystickStop();
+            const nextPos = controller.handleJoystickStop();
+            if (nextPos) {
+              setX(nextPos.x);
+            }
           }}
+          pos={{x, y: 0}}
           size={100}
           stickSize={50}
         />

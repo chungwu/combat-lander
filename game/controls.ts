@@ -248,16 +248,29 @@ export class KeyboardController {
           type: "joystick",
           targetThrottle, targetRotation, rotatingLeft: null, rotatingRight: null
         });
+      } else if (JOYSTICK_CONFIG.scheme === "sticky") {
+        const normX = normed(event.x!, 0.01);
+        const targetRotation = normX == null ? 0 : normX * -0.5 * Math.PI
+        const normY = normed(event.y!);
+        const targetThrottle = normY == null ? lander.throttle : normY < 0 ? 0 : normY;
+        this.maybeProcessJoystickEvent({
+          type: "joystick",
+          targetRotation,
+          rotatingLeft: null,
+          rotatingRight: null,
+          targetThrottle
+        });
       } else if (JOYSTICK_CONFIG.scheme === "duo") {
         if (event.x != null) {
-          const normX = normed(event.x, 0.2);
+          const normX = normed(event.x, 0.01);
+          const targetRotation = normX == null ? 0 : normX * -0.5 * Math.PI
           this.maybeProcessJoystickEvent({
             type: "joystick",
             targetThrottle: lander.throttle,
-            targetRotation: null,
+            rotatingLeft: null,
+            rotatingRight: null,
             ...this.lastJoystickMsg,
-            rotatingLeft: normX != null && normX < 0,
-            rotatingRight: normX != null && normX > 0,
+            targetRotation
           });
         } else if (event.y != null) {
           const normY = normed(event.y);
@@ -329,7 +342,7 @@ export class KeyboardController {
         rotatingRight: false,
         targetRotation: null
       });
-    } else if (JOYSTICK_CONFIG.scheme === "duo") {
+    } else if (JOYSTICK_CONFIG.scheme === "duo" || JOYSTICK_CONFIG.scheme === "sticky") {
       this.maybeProcessJoystickEvent({
         type: "joystick",
         targetThrottle: lander.throttle,
@@ -338,9 +351,13 @@ export class KeyboardController {
         targetRotation: null
       });
       return {
-        x: 0,
-        y: lander.throttle === 0 ? 0 : lander.throttle * (1 - JOYSTICK_CONFIG.threshold) + JOYSTICK_CONFIG.threshold
+        x: lander.targetRotation == null ? 0 : proportionToJoystickPosition(lander.targetRotation / -0.5 / Math.PI),
+        y: lander.throttle === 0 ? 0 : proportionToJoystickPosition(lander.throttle)
       }
     }
   }
+}
+
+function proportionToJoystickPosition(proportion: number) {
+  return proportion * (1-JOYSTICK_CONFIG.threshold) + (proportion > 0 ? 1 : -1) * JOYSTICK_CONFIG.threshold;
 }
