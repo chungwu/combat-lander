@@ -18,7 +18,7 @@ import sty from "./GameOverlay.module.css";
 import { JoinGameDialog } from "./JoinGameDialog";
 import { Menu, MenuItem, MenuSeparator, Popover } from "./Menu";
 import { Modal } from "./Modal";
-import { ResetGameDialog, StartGameDialog } from "./StartGameDialog";
+import { InviteGameDialog, ResetGameDialog, StartGameDialog } from "./StartGameDialog";
 import { useClientEngine } from "./contexts";
 
 export const GameOverlay = observer(function GameOverlay() {
@@ -52,7 +52,14 @@ const TopRight = observer(function TopRight(props: {}) {
   return (
     <div className={sty.topRight}>
       {engine.isPlaying ? (
-        null
+        <>
+          <DialogTrigger>
+            <Button>
+              Invite
+            </Button>
+            <InviteGameDialog />
+          </DialogTrigger>
+        </>
       ) : game.landers.length === 0 ? (
         <DialogTrigger>
           <Button size="large" styleType="super-primary">

@@ -1,9 +1,10 @@
+import { GameOptions } from "@/game/game-state";
+import { useRouter } from "next/router";
 import { Form, Heading } from "react-aria-components";
 import { Button } from "./Button";
-import { TextField } from "./TextField";
-import { Modal } from "./Modal";
 import { Checkbox } from "./Checkbox";
-import { GameOptions } from "@/game/game-state";
+import { Modal } from "./Modal";
+import { TextField } from "./TextField";
 
 export function StartGameDialog(props: {
   defaultName: string;
@@ -121,5 +122,29 @@ function GameOptionsForm() {
         Infinite fuel?
       </Checkbox>
     </div>
+  );
+}
+
+export function InviteGameDialog() {
+  const router = useRouter();
+  const roomId = router.query.roomId as string;
+  return (
+    <Modal underlayBlur>
+      {({close}) => (
+        <div style={{display: "flex", flexDirection: "column", gap: 24}}>
+          <Heading slot="title">Invite your friends</Heading>
+
+          <p>
+            You can invite people to this game by just sharing the url!
+          </p>
+
+          <TextField value={`https://lander.gg/${roomId}`} autoFocus autoSelectAll />
+
+          <Button style={{alignSelf: "flex-start"}} type="submit" styleType="primary" onPress={() => {
+            close();
+          }}>Close</Button>
+        </div>
+      )}
+    </Modal>
   );
 }
