@@ -4,9 +4,11 @@
 }
 
 .menuItem {
-  padding: 4px 8px;
+  padding: 8px 16px;
   background-color: transparent;
   transition: all 0.2s;
+  width: 100%;
+  display: block;
 }
 
 .menuItem[data-focused] {
@@ -14,14 +16,23 @@
   outline: none;
 }
 
-@media screen and (max-width: 1024px) {
-  .menuItem {
-    padding: 24px 24px;
-  }
-}
 
 .popover {
   backdrop-filter: blur(8px);
   border: 1px solid var(--control-border);
   background-color: transparent;
+}
+
+.menuSeparator {
+  height: 1px;
+  border-top: 1px solid var(--control-border);
+  margin: 4px 8px;
+}
+@media screen and (max-width: 1024px) {
+  .menuItem {
+    padding: 24px 24px;
+  }
+  .menuSeparator {
+    margin: 4px 24px;
+  }
 }

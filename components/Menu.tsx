@@ -1,4 +1,4 @@
-import { Menu as BaseMenu, MenuItem as BaseMenuItem, Popover as BasePopover } from "react-aria-components";
+import { Menu as BaseMenu, MenuItem as BaseMenuItem, Popover as BasePopover, Separator } from "react-aria-components";
 import React from "react";
 import sty from "./Menu.module.css";
 import { mergeProps } from "react-aria";
@@ -25,4 +25,8 @@ export function Popover(props: React.ComponentProps<typeof BasePopover>) {
   return (
     <BasePopover {...mergeProps(rest, {className: classNames("app", "dark", MONO.variable, sty.popover)})} />
   );
+}
+
+export function MenuSeparator() {
+  return <Separator className={sty.menuSeparator} />;
 }

@@ -16,7 +16,7 @@ import { Joystick, JoystickShape } from "react-joystick-component";
 import { Button } from "./Button";
 import sty from "./GameOverlay.module.css";
 import { JoinGameDialog } from "./JoinGameDialog";
-import { Menu, MenuItem, Popover } from "./Menu";
+import { Menu, MenuItem, MenuSeparator, Popover } from "./Menu";
 import { Modal } from "./Modal";
 import { ResetGameDialog, StartGameDialog } from "./StartGameDialog";
 import { useClientEngine } from "./contexts";
@@ -110,6 +110,9 @@ const TopRight = observer(function TopRight(props: {}) {
                 {isFullScreen ? "Exit fullscreen mode" : "Fullscreen mode"}
               </MenuItem>
             )}
+            <MenuSeparator />
+            <MenuItem
+              target="_blank" href={"https://github.com/chungwu/combat-lander"}>About</MenuItem>
           </Menu>
         </Popover>
       </MenuTrigger>
@@ -184,7 +187,7 @@ const LeaderBoard = observer(function LeaderBoard(props: {
 }) {
   const engine = useClientEngine();
   const game = engine.game;
-  if (game.landers.length <= 1) {
+  if (game.landers.length < 1) {
     return null;
   }
 
