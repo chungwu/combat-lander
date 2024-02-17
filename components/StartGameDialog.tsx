@@ -8,6 +8,9 @@ import { TextField } from "./TextField";
 import { isTouchDevice } from "@/utils/utils";
 import { SelectField, SelectOption } from "./Select";
 import { getControlScheme, setControlScheme } from "@/game/controls";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCopy } from "@fortawesome/free-solid-svg-icons";
+import React from "react";
 
 export function StartGameDialog(props: {
   defaultName: string;
@@ -128,8 +131,8 @@ function GameOptionsForm() {
 }
 
 export function InviteGameDialog() {
-  const router = useRouter();
-  const roomId = router.query.roomId as string;
+  const url = window.location.href;
+  const [copied, setCopied] = React.useState(false);
   return (
     <Modal underlayBlur>
       {({close}) => (
@@ -140,7 +143,17 @@ export function InviteGameDialog() {
             You can invite people to this game by just sharing the url!
           </p>
 
-          <TextField value={`https://lander.gg/${roomId}`} autoFocus autoSelectAll />
+          <div style={{display: "flex", gap: 8}}>
+            <TextField style={{flexGrow: 1}} value={url} autoFocus autoSelectAll isReadOnly />
+            <Button onPress={async () => {
+              await navigator.clipboard.writeText(url);
+              setCopied(true);
+            }} aria-label="Copy invite url">
+              <FontAwesomeIcon icon={faCopy} />
+            </Button>
+          </div>
+
+          {copied && <div>Copied!</div>}
 
           <Button style={{alignSelf: "flex-start"}} type="submit" styleType="primary" onPress={() => {
             close();
