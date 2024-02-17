@@ -100,6 +100,12 @@ export class ServerLanderEngine extends BaseLanderEngine {
       });
     } else if (msg.type === "request-full") {
       this.send(sender, this.makeFullMessage());
+    } else if (msg.type === "player-info") {
+      const lander = this.game.landers.find(l => l.id === sender.id);
+      if (lander) {
+        lander.name = msg.name;
+      }
+      this.broadcast(this.makePartialMessage());
     }
   }
 

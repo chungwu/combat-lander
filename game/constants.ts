@@ -105,8 +105,4 @@ export const SERVER_SNAPSHOT_FREQ = 1; // save every snapshot
 export const CLIENT_SNAPSHOT_GC_FREQ = 60 * 1; // gc every second
 export const CLIENT_SNAPSHOT_FREQ = 1; // save every snapshot
 
-export const JOYSTICK_CONFIG: {use: boolean, scheme: "keyboard" | "angled" | "mixed" | "duo" | "sticky", threshold: number} = {
-  use: false,
-  scheme: "sticky",
-  threshold: 0.1
-};
+export const JOYSTICK_THRESHOLD = 0.1;

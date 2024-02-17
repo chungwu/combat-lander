@@ -46,7 +46,12 @@ export interface RequestFullSyncMessage extends Message {
   type: "request-full";
 }
 
-export type ClientMessage = JoinMessage | PlayerInputMessage | RequestResetGameMessage | CancelResetGameMessage | RequestStartGameMessage | RequestFullSyncMessage;
+export interface PlayerInfoMessage extends Message {
+  type: "player-info";
+  name: string;
+}
+
+export type ClientMessage = JoinMessage | PlayerInputMessage | RequestResetGameMessage | CancelResetGameMessage | RequestStartGameMessage | RequestFullSyncMessage | PlayerInfoMessage;
 
 export interface InitMessage extends Message {
   type: "init";

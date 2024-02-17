@@ -1,5 +1,5 @@
-import { JOYSTICK_CONFIG, ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
-import { PseudoKeyboardEvent } from "@/game/controls";
+import { ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
+import { PseudoKeyboardEvent, getControlScheme } from "@/game/controls";
 import { Lander } from "@/game/objects/lander";
 import { blurActive, isFullScreenMode } from "@/utils/dom-utils";
 import { ensure, isTouchDevice, makeShortId } from "@/utils/utils";
@@ -18,7 +18,7 @@ import sty from "./GameOverlay.module.css";
 import { JoinGameDialog } from "./JoinGameDialog";
 import { Menu, MenuItem, MenuSeparator, Popover } from "./Menu";
 import { Modal } from "./Modal";
-import { InviteGameDialog, ResetGameDialog, StartGameDialog } from "./StartGameDialog";
+import { InviteGameDialog, PlayerInfoDialog, ResetGameDialog, StartGameDialog } from "./StartGameDialog";
 import { useClientEngine } from "./contexts";
 
 export const GameOverlay = observer(function GameOverlay() {
@@ -39,6 +39,7 @@ const TopRight = observer(function TopRight(props: {}) {
   const prevName = localStorage.getItem("playerName");
   const { isFullScreen, toggleFullScreen } = useToggleFullScreen();
   const [ resetOpen, setResetOpen ] = React.useState(false);
+  const [ playerSettingsOpen, setPlayerSettingsOpen ] = React.useState(false);
   const router = useRouter();
   const roomId = router.query.roomId as string;
 
@@ -100,6 +101,8 @@ const TopRight = observer(function TopRight(props: {}) {
               setResetOpen(true);
             } else if (action === "toggle-full-screen") {
               toggleFullScreen();
+            } else if (action === "player-settings") {
+              setPlayerSettingsOpen(true);
             }
           }}>
             {engine.isPlaying && (
@@ -118,6 +121,8 @@ const TopRight = observer(function TopRight(props: {}) {
               </MenuItem>
             )}
             <MenuSeparator />
+            <MenuItem id="player-settings">Player settings</MenuItem>
+            <MenuSeparator />
             <MenuItem
               target="_blank" href={"https://github.com/chungwu/combat-lander"}>About</MenuItem>
           </Menu>
@@ -134,6 +139,19 @@ const TopRight = observer(function TopRight(props: {}) {
             setResetOpen(false);
             blurActive();
           }}
+        />
+      )}
+      {playerSettingsOpen && (
+        <PlayerInfoDialog
+          curSettings={{
+            name: engine.selfLander?.name ?? localStorage.getItem("playerName") ?? "Player"
+          }}
+          onSave={(opts) => {
+            maybeSavePlayerName(opts.name);
+            engine.setPlayerSettings({name: opts.name});
+          }}
+          isOpen
+          onClose={() => setPlayerSettingsOpen(false)}
         />
       )}
     </div>
@@ -258,17 +276,13 @@ const DamageFlasher = observer(function DamageFlasher(props: {
 const KeyboardControlsOverlay = observer(function KeyboardOverlay(props: {
 }) {
   const engine = useClientEngine();
-  console.log("SCHEME", JOYSTICK_CONFIG.scheme);
-  const useDuo = JOYSTICK_CONFIG.use && JOYSTICK_CONFIG.scheme === "duo";
+  const scheme = getControlScheme();
   return (
     <div className={sty.keyboardControlsOverlay}>
       {engine.isPlaying && 
         <>
-          {JOYSTICK_CONFIG.use ? (
-            useDuo ? <DuoJoystickOverlay /> :
-            <JoystickOverlay /> 
-): <ArrowKeysOverlay />}
-          <WeaponControlsOverlay middle={useDuo} />
+          {scheme === "keyboard" ? <ArrowKeysOverlay /> : scheme === "duo" ? <DuoJoystickOverlay /> : <JoystickOverlay />}
+          <WeaponControlsOverlay middle={scheme === "duo"} />
         </>
       }
     </div>

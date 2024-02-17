@@ -1,7 +1,7 @@
 import Rapier, { ActiveCollisionTypes, ActiveEvents, Ball, Collider, Vector, Vector2, World } from "@dimforge/rapier2d";
 import { GameOptions, LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
-import { FULL_THROTTLE_FORCE, JOYSTICK_CONFIG, LANDER_RADIUS, LanderColor, ROCKET_STATS, ROTATE_FUEL_BURN_RATE, RocketType, THROTTLE_FUEL_BURN_RATE, THROTTLE_RATE, TURN_RATE } from "../constants";
+import { FULL_THROTTLE_FORCE, LANDER_RADIUS, LanderColor, ROCKET_STATS, ROTATE_FUEL_BURN_RATE, RocketType, THROTTLE_FUEL_BURN_RATE, THROTTLE_RATE, TURN_RATE } from "../constants";
 import { normalizeAngle, rotateVector, vectorMagnitude } from "@/utils/math";
 import pick from "lodash/pick";
 import { GameInputEvent } from "@/messages";

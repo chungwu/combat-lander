@@ -1,0 +1,17 @@
+.listBox {
+  min-width: 150px;
+  outline: none;
+}
+
+.listBoxItem {
+  padding: 8px 16px;
+  background-color: transparent;
+  transition: all 0.2s;
+  width: 100%;
+  display: block;
+}
+
+.listBoxItem[data-focused] {
+  background-color: rgba(255, 230, 41, 0.2);
+  outline: none;
+}

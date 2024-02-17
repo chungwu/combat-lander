@@ -253,4 +253,13 @@ export class ClientLanderEngine extends BaseLanderEngine {
       time: this.timestep,
     });
   }
+
+  setPlayerSettings(opts: {name: string}) {
+    this.sendMessage({
+      type: "player-info",
+      name: opts.name,
+      gameId: this.game.id,
+      time: this.timestep
+    });
+  }
 }

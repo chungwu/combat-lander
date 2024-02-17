@@ -23,16 +23,22 @@ export function Modal(props: {
       }}
       isDismissable={modalType === "alertdialog" ? false : true}
     >
-      <BaseModal
-        className={sty.modal}
-        style={{
-          backdropFilter: modalBlur ? "blur(8px)" : undefined,
-        }}
+      <div
+        onKeyDown={e => e.stopPropagation()}
+        onKeyUp={e => e.stopPropagation()}
+        onKeyPress={e => e.stopPropagation()}
       >
-        <Dialog className={sty.dialog} role={modalType}>
-          {children}
-        </Dialog>
-      </BaseModal>
+        <BaseModal
+          className={sty.modal}
+          style={{
+            backdropFilter: modalBlur ? "blur(8px)" : undefined,
+          }}
+        >
+          <Dialog className={sty.dialog} role={modalType}>
+            {children}
+          </Dialog>
+        </BaseModal>
+      </div>
     </ModalOverlay>
   )
 }

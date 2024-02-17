@@ -1,17 +1,40 @@
-import { clamp, pull } from "lodash";
-import { ClientLanderEngine } from "./client-engine";
-import { JOYSTICK_CONFIG } from "./constants";
-import { IJoystickUpdateEvent } from "react-joystick-component/build/lib/Joystick";
-import { normalizeAngle, vectorMagnitude } from "@/utils/math";
-import { Vector2 } from "@dimforge/rapier2d";
 import { GameInputEvent } from "@/messages";
-import assert from "assert";
-import { ExtractByType } from "@/utils/utils";
+import { normalizeAngle, vectorMagnitude } from "@/utils/math";
+import { ExtractByType, isTouchDevice } from "@/utils/utils";
+import { Vector2 } from "@dimforge/rapier2d";
+import { clamp, pull } from "lodash";
 import { nanoid } from "nanoid";
+import { ClientLanderEngine } from "./client-engine";
+import { JOYSTICK_THRESHOLD } from "./constants";
+import { observable } from "mobx";
 
 export interface PseudoKeyboardEvent {
   type: "keyup" | "keydown" | "keypress";
   key: string;
+}
+
+export type MobileControlScheme = "keyboard" | "sticky" | "duo" | "mixed" | "angled";
+
+const mobileControlScheme = observable.box<MobileControlScheme | undefined>(undefined);
+
+export function getControlScheme() {
+  if (isTouchDevice()) {
+    if (mobileControlScheme.get()) {
+      return mobileControlScheme.get();
+    }
+    const stored = localStorage.getItem("controlScheme");
+    if (stored) {
+      return stored;
+    }
+    return "sticky";
+  } else {
+    return "keyboard";
+  }
+}
+
+export function setControlScheme(scheme: MobileControlScheme) {
+  localStorage.setItem("controlScheme", scheme);
+  mobileControlScheme.set(scheme);
 }
 
 export type KeyEventListener = (event: PseudoKeyboardEvent) => void;
@@ -176,12 +199,13 @@ export class KeyboardController {
       return;
     }
 
-    if (JOYSTICK_CONFIG.scheme === "keyboard") {
+    const scheme = getControlScheme();
+    if (scheme === "keyboard") {
       if (event.x != null) {
-        if (event.x < -JOYSTICK_CONFIG.threshold) {
+        if (event.x < -JOYSTICK_THRESHOLD) {
           this.handleKeyEvent({type: "keydown", key: "ArrowLeft"});
           this.handleKeyEvent({type: "keyup", key: "ArrowRight"});
-        } else if (event.x > JOYSTICK_CONFIG.threshold) {
+        } else if (event.x > JOYSTICK_THRESHOLD) {
           this.handleKeyEvent({type: "keydown", key: "ArrowRight"});
           this.handleKeyEvent({type: "keyup", key: "ArrowLeft"});
         } else {
@@ -194,10 +218,10 @@ export class KeyboardController {
         }
       }
       if (event.y != null) {
-        if (event.y < -JOYSTICK_CONFIG.threshold) {
+        if (event.y < -JOYSTICK_THRESHOLD) {
           this.handleKeyEvent({type: "keydown", key: "ArrowDown"});
           this.handleKeyEvent({type: "keyup", key: "ArrowUp"});
-        } else if (event.y > JOYSTICK_CONFIG.threshold) {
+        } else if (event.y > JOYSTICK_THRESHOLD) {
           this.handleKeyEvent({type: "keydown", key: "ArrowUp"});
           this.handleKeyEvent({type: "keyup", key: "ArrowDown"});
         } else {
@@ -210,7 +234,7 @@ export class KeyboardController {
         }
       }
     } else {
-      const normed = (val: number, actionThreshold: number=JOYSTICK_CONFIG.threshold) => {
+      const normed = (val: number, actionThreshold: number=JOYSTICK_THRESHOLD) => {
         if (Math.abs(val) < actionThreshold) {
           return undefined;
         }
@@ -219,7 +243,7 @@ export class KeyboardController {
         return Math.round(magnitude * 100) / 100;
       };
 
-      if (JOYSTICK_CONFIG.scheme === "mixed") {
+      if (scheme === "mixed") {
         const normY = normed(event.y!);
         const normX = normed(event.x!);
         if (normX == null && normY == null) {
@@ -234,7 +258,7 @@ export class KeyboardController {
           rotatingRight: normX != null && normX > 0
         });
         // return { x: event.x, y: event.y! };
-      } else if (JOYSTICK_CONFIG.scheme === "angled") {
+      } else if (scheme === "angled") {
         const normY = normed(event.y!);
         const normX = normed(event.x!, 0.01);
         if (normX == null && normY == null) {
@@ -249,7 +273,7 @@ export class KeyboardController {
           type: "joystick",
           targetThrottle, targetRotation, rotatingLeft: null, rotatingRight: null
         });
-      } else if (JOYSTICK_CONFIG.scheme === "sticky") {
+      } else if (scheme === "sticky") {
         const normX = normed(event.x!, 0.01);
         const targetRotation = normX == null ? 0 : normX * -0.5 * Math.PI
         const normY = normed(event.y!);
@@ -261,7 +285,7 @@ export class KeyboardController {
           rotatingRight: null,
           targetThrottle
         });
-      } else if (JOYSTICK_CONFIG.scheme === "duo") {
+      } else if (scheme === "duo") {
         if (event.x != null) {
           const normX = normed(event.x, 0.01);
           const targetRotation = normX == null ? 0 : normX * -0.5 * Math.PI
@@ -310,7 +334,8 @@ export class KeyboardController {
       return;
     }
 
-    if (JOYSTICK_CONFIG.scheme === "keyboard") {
+    const scheme = getControlScheme();
+    if (scheme === "keyboard") {
       if (this.pressingUp) {
         this.handleKeyEvent({type: "keyup", key: "ArrowUp"});
       }
@@ -323,7 +348,7 @@ export class KeyboardController {
       if (this.pressingRight) {
         this.handleKeyEvent({type: "keyup", key: "ArrowRight"});
       }
-    } else if (JOYSTICK_CONFIG.scheme === "mixed") {
+    } else if (scheme === "mixed") {
       this.maybeProcessJoystickEvent({
         type: "joystick",
         targetThrottle: lander.throttle,
@@ -333,9 +358,9 @@ export class KeyboardController {
       });
       return {
         x: 0,
-        y: lander.throttle === 0 ? 0 : lander.throttle * (1 - JOYSTICK_CONFIG.threshold) + JOYSTICK_CONFIG.threshold
+        y: lander.throttle === 0 ? 0 : lander.throttle * (1 - JOYSTICK_THRESHOLD) + JOYSTICK_THRESHOLD
       }
-    } else if (JOYSTICK_CONFIG.scheme === "angled") {
+    } else if (scheme === "angled") {
       this.maybeProcessJoystickEvent({
         type: "joystick",
         targetThrottle: 0,
@@ -343,7 +368,7 @@ export class KeyboardController {
         rotatingRight: false,
         targetRotation: null
       });
-    } else if (JOYSTICK_CONFIG.scheme === "duo" || JOYSTICK_CONFIG.scheme === "sticky") {
+    } else if (scheme === "duo" || scheme === "sticky") {
       this.maybeProcessJoystickEvent({
         type: "joystick",
         targetThrottle: lander.throttle,
@@ -360,5 +385,5 @@ export class KeyboardController {
 }
 
 function proportionToJoystickPosition(proportion: number) {
-  return proportion * (1-JOYSTICK_CONFIG.threshold) + (proportion > 0 ? 1 : -1) * JOYSTICK_CONFIG.threshold;
+  return proportion * (1-JOYSTICK_THRESHOLD) + (proportion > 0 ? 1 : -1) * JOYSTICK_THRESHOLD;
 }

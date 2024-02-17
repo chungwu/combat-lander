@@ -5,6 +5,9 @@ import { Button } from "./Button";
 import { Checkbox } from "./Checkbox";
 import { Modal } from "./Modal";
 import { TextField } from "./TextField";
+import { isTouchDevice } from "@/utils/utils";
+import { SelectField, SelectOption } from "./Select";
+import { getControlScheme, setControlScheme } from "@/game/controls";
 
 export function StartGameDialog(props: {
   defaultName: string;
@@ -22,7 +25,6 @@ export function StartGameDialog(props: {
           onSubmit={e => {
             e.preventDefault();
             const data = new FormData(e.currentTarget);
-            console.log("FORM DATA", data);
             onStart({
               name: data.get("name")?.toString() ?? defaultName,
               options: extractGameOptions(data)
@@ -147,4 +149,65 @@ export function InviteGameDialog() {
       )}
     </Modal>
   );
+}
+
+
+export interface PlayerSettings {
+  name: string;
+}
+export function PlayerInfoDialog(props: {
+  curSettings: PlayerSettings;
+  onSave: (opts: PlayerSettings) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+}) {
+  const { curSettings, onSave, isOpen, onClose } = props;
+  return (
+    <Modal underlayBlur {...isOpen == null ? {} : {isOpen}}>
+      {({close}) => (
+        <Form
+          style={{display: "flex", flexDirection: "column", gap: 24}}
+          onSubmit={e => {
+            e.preventDefault();
+            const data = new FormData(e.currentTarget);
+            onSave({
+              name: data.get("name")!.toString()
+            });
+            setControlScheme(data.get("controlScheme")!.toString() as any);
+            close();
+            onClose?.();
+          }}
+        >
+          <Heading slot="title">Player settings</Heading>
+
+          <TextField 
+            label="Your name"
+            name="name" 
+            defaultValue={curSettings.name}
+            autoFocus
+            autoSelectAll
+          />
+          {isTouchDevice() && (
+            <SelectField 
+              label="Control scheme" 
+              name="controlScheme" 
+              defaultSelectedKey={getControlScheme()}
+            >
+              <SelectOption id="sticky">Single joystick</SelectOption>
+              <SelectOption id="duo">Dual joystick</SelectOption>
+              <SelectOption id="keyboard">Arrow keys</SelectOption>
+            </SelectField>
+          )}
+          <div style={{display: "flex", gap: 24}}>
+            <Button type="submit" styleType="primary" autoFocus>Save</Button>
+            <Button styleType="clear" onPress={() => {
+              close();
+              onClose?.();
+            }}>Nevermind...</Button>
+          </div>
+        </Form>
+      )}
+    </Modal>
+  );
+
 }
