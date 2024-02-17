@@ -21,6 +21,7 @@ export function Modal(props: {
       style={{
         backdropFilter: underlayBlur ? "blur(8px)" : undefined,
       }}
+      isDismissable={modalType === "alertdialog" ? false : true}
     >
       <BaseModal
         className={sty.modal}
