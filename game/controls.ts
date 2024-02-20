@@ -62,6 +62,14 @@ export class KeyboardController {
     document.removeEventListener("keypress", this.onKeyPress);
   }
 
+  reset() {
+    this.pressingDown = false;
+    this.pressingUp = false;
+    this.pressingLeft = false;
+    this.pressingRight = false;
+    this.lastJoystickMsg = undefined;
+  }
+
   handleKeyEvent(event: PseudoKeyboardEvent) {
     if (event.type === "keyup") {
       this.handleKeyUp(event);

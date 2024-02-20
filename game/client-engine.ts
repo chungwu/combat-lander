@@ -122,6 +122,11 @@ export class ClientLanderEngine extends BaseLanderEngine {
     });
   }
 
+  protected reset() {
+    super.reset();
+    this.controller.reset();
+  }
+
   private applySyncMessage(msg: FullSyncMessage | PartialSyncMessage) {
     if (msg.type === "full") {
       // For a full sync, we make it part of our snapshots history, and
