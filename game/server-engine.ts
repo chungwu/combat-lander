@@ -106,6 +106,8 @@ export class ServerLanderEngine extends BaseLanderEngine {
         lander.name = msg.name;
       }
       this.broadcast(this.makePartialMessage());
+    } else if (msg.type === "chat") {
+      this.broadcast(msg);
     }
   }
 

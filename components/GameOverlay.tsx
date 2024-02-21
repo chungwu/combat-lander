@@ -3,7 +3,7 @@ import { PseudoKeyboardEvent, getControlScheme } from "@/game/controls";
 import { Lander } from "@/game/objects/lander";
 import { blurActive, isFullScreenMode } from "@/utils/dom-utils";
 import { ensure, isTouchDevice, makeShortId } from "@/utils/utils";
-import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp, faBars } from "@fortawesome/free-solid-svg-icons";
+import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp, faBars, faMessage } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import sortBy from "lodash/sortBy";
@@ -15,11 +15,12 @@ import { Button as BaseButton, DialogTrigger, Heading, MenuTrigger } from "react
 import { Joystick, JoystickShape } from "react-joystick-component";
 import { Button } from "./Button";
 import sty from "./GameOverlay.module.css";
-import { JoinGameDialog } from "./JoinGameDialog";
 import { Menu, MenuItem, MenuSeparator, Popover } from "./Menu";
 import { Modal } from "./Modal";
-import { InviteGameDialog, PlayerInfoDialog, ResetGameDialog, StartGameDialog } from "./StartGameDialog";
+import { ChatDialog, InviteGameDialog, JoinGameDialog, PlayerInfoDialog, ResetGameDialog, StartGameDialog } from "./dialogs";
 import { useClientEngine } from "./contexts";
+import { ChatMessage } from "@/messages";
+import { gray, grayDark } from "@radix-ui/colors";
 
 export const GameOverlay = observer(function GameOverlay() {
   return (
@@ -51,84 +52,88 @@ const TopRight = observer(function TopRight(props: {}) {
   };
 
   return (
-    <div className={sty.topRight}>
-      {engine.isPlaying ? (
-        <>
-          <DialogTrigger>
-            <Button>
-              Invite
-            </Button>
-            <InviteGameDialog />
-          </DialogTrigger>
-        </>
-      ) : game.landers.length === 0 ? (
-        <DialogTrigger>
-          <Button size="large" styleType="super-primary">
-            Start game!
-          </Button>
-          <StartGameDialog
-            defaultName={prevName ?? `Player 1`}
-            onStart={(opts) => {
-              maybeSavePlayerName(opts.name);
-              engine.startGame(opts.name, opts.options);
-            }}
-          />
-        </DialogTrigger>
-      ) : (
-        <DialogTrigger>
-          <Button
-            size="large"
-            styleType="super-primary"
-          >
-            Join
-          </Button>
-          <JoinGameDialog 
-            defaultName={prevName ?? `Player ${game.landers.length + 1}`}
-            onJoin={opts => {
-              maybeSavePlayerName(opts.name);
-              engine.joinGame(opts);
-            }}
-          />
-        </DialogTrigger>
-      )}
-      <MenuTrigger>
-        <Button aria-label="Menu"><FontAwesomeIcon icon={faBars} /></Button>
-        <Popover placement="bottom right">
-          <Menu onAction={(action) => {
-            if (action === "start-private-game") {
-              router.push(`/${makeShortId()}`)
-            } else if (action === "restart-game") {
-              setResetOpen(true);
-            } else if (action === "toggle-full-screen") {
-              toggleFullScreen();
-            } else if (action === "player-settings") {
-              setPlayerSettingsOpen(true);
-            }
-          }}>
-            {engine.isPlaying && (
-              <MenuItem id="restart-game">
-                Reset this game
-              </MenuItem>
-            )}
-            {roomId === "public" && (
-              <MenuItem id="start-private-game">
-                Start private game
-              </MenuItem>
-            )}
-            {isTouchDevice() && (
-              <MenuItem id="toggle-full-screen">
-                {isFullScreen ? "Exit fullscreen mode" : "Fullscreen mode"}
-              </MenuItem>
-            )}
-            <MenuSeparator />
-            <MenuItem id="player-settings">Player settings</MenuItem>
-            <MenuSeparator />
-            <MenuItem
-              target="_blank" href={"https://github.com/chungwu/combat-lander"}>About</MenuItem>
-          </Menu>
-        </Popover>
-      </MenuTrigger>
-
+    <>
+      <div className={sty.topRight}>
+        <div className={sty.topRightRow}>
+          {engine.isPlaying ? (
+            <>
+              <DialogTrigger>
+                <Button>
+                  Invite
+                </Button>
+                <InviteGameDialog />
+              </DialogTrigger>
+            </>
+          ) : game.landers.length === 0 ? (
+            <DialogTrigger>
+              <Button size="large" styleType="super-primary">
+                Start game!
+              </Button>
+              <StartGameDialog
+                defaultName={prevName ?? `Player 1`}
+                onStart={(opts) => {
+                  maybeSavePlayerName(opts.name);
+                  engine.startGame(opts.name, opts.options);
+                }}
+              />
+            </DialogTrigger>
+          ) : (
+            <DialogTrigger>
+              <Button
+                size="large"
+                styleType="super-primary"
+              >
+                Join
+              </Button>
+              <JoinGameDialog 
+                defaultName={prevName ?? `Player ${game.landers.length + 1}`}
+                onJoin={opts => {
+                  maybeSavePlayerName(opts.name);
+                  engine.joinGame(opts);
+                }}
+              />
+            </DialogTrigger>
+          )}
+          <MenuTrigger>
+            <Button aria-label="Menu"><FontAwesomeIcon icon={faBars} style={{width: 16}} /></Button>
+            <Popover placement="bottom right">
+              <Menu onAction={(action) => {
+                if (action === "start-private-game") {
+                  router.push(`/${makeShortId()}`)
+                } else if (action === "restart-game") {
+                  setResetOpen(true);
+                } else if (action === "toggle-full-screen") {
+                  toggleFullScreen();
+                } else if (action === "player-settings") {
+                  setPlayerSettingsOpen(true);
+                }
+              }}>
+                {engine.isPlaying && (
+                  <MenuItem id="restart-game">
+                    Reset this game
+                  </MenuItem>
+                )}
+                {roomId === "public" && (
+                  <MenuItem id="start-private-game">
+                    Start private game
+                  </MenuItem>
+                )}
+                {isTouchDevice() && (
+                  <MenuItem id="toggle-full-screen">
+                    {isFullScreen ? "Exit fullscreen mode" : "Fullscreen mode"}
+                  </MenuItem>
+                )}
+                <MenuSeparator />
+                <MenuItem id="player-settings">Player settings</MenuItem>
+                <MenuSeparator />
+                <MenuItem
+                  target="_blank" href={"https://github.com/chungwu/combat-lander"}>About</MenuItem>
+              </Menu>
+            </Popover>
+          </MenuTrigger>
+        </div>
+        <Chats />
+      </div>
       {resetOpen && (
         <ResetGameDialog
           isOpen
@@ -154,7 +159,7 @@ const TopRight = observer(function TopRight(props: {}) {
           onClose={() => setPlayerSettingsOpen(false)}
         />
       )}
-    </div>
+    </>
   );
 });
 
@@ -591,4 +596,96 @@ function useToggleFullScreen() {
       }
     }
   };
+}
+
+function Chats() {
+  const [chats, setChats] = React.useState<ChatMessage[]>([]);
+  const engine = useClientEngine();
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [showForm, setShowForm] = React.useState(false);
+
+  React.useEffect(() => {
+    const listener = (msg: ChatMessage) => {
+      setChats((chats) => [...chats, msg]);
+    };
+    engine.addChatListener(listener);
+    return () => {
+      engine.removeChatListener(listener);
+    }
+  }, [engine, setChats]);
+
+  React.useEffect(() => {
+    if (ref.current) {
+      ref.current.scrollTo(0, ref.current.clientHeight);
+    }
+  });
+
+  React.useEffect(() => {
+    const id = setInterval(() => {
+      setChats(chats => {
+        // Keep messages for 10 seconds
+        const filtered = chats.filter(c  => c.time > (engine.timestep - 10 * 60));
+        if (filtered.length !== chats.length) {
+          return filtered;
+        } else {
+          return chats;
+        }
+      });
+    }, 1000);
+    return () => {
+      clearInterval(id);
+    };
+  }, [setChats, engine]);
+
+  React.useEffect(() => {
+    const listener = (event: KeyboardEvent) => {
+      if (event.key === "t") {
+        event.preventDefault();
+        event.stopPropagation();
+        setShowForm(true);
+      }
+    };
+    document.addEventListener("keypress", listener);
+    return () => {
+      document.removeEventListener("keypress", listener);
+    };
+  }, []);
+
+  const getChatAuthor = (msg: ChatMessage) => {
+    const lander = engine.game.landers.find(l => l.id === msg.playerId);
+    return lander;
+  };
+
+  return (
+    <>
+      <div className={sty.topRightRow}>
+        <DialogTrigger isOpen={showForm} onOpenChange={(open) => setShowForm(open)}>
+          <Button aria-label="Chat"><FontAwesomeIcon icon={faMessage}/></Button>
+          <ChatDialog 
+            onSend={opts => {
+              engine.sendChat(opts);
+            }}
+          />
+        </DialogTrigger>
+      </div>
+      <div className={sty.topRightRow}>
+        <div className={sty.chats} ref={ref}>
+          {chats.map((chat, i) => {
+            const lander = getChatAuthor(chat);
+            return (
+              <div 
+                className={sty.chatMessage}
+              >
+                <div className={sty.chatMessageBg} style={{backgroundColor: lander ? getLanderColor(lander.color, 5) : grayDark.gray5}} />
+                <span className={sty.chatMessageAuthor}>
+                  {lander?.name ?? "(unknown)"}:
+                </span> {chat.message}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+    </>
+  )
 }

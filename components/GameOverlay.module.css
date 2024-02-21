@@ -12,9 +12,16 @@
   right: 24px;
   display: flex;
   z-index: var(--z-hud);
+  gap: 8px;
+  align-items: flex-end;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.topRightRow {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
 }
 
@@ -195,4 +202,40 @@
 .rocketProgress {
   opacity: 0.5;
   height: 100%;
+}
+
+.chats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  pointer-events: none;
+  overflow: auto;
+}
+.chats::-webkit-scrollbar {
+  display: none;
+}
+
+.chatMessage {
+  color: var(--gray-11);
+  border-radius: 8px;
+  max-width: 200px;
+  padding: 8px;
+  font-size: var(--text-size-small);
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  align-self: flex-end;
+  backdrop-filter: blur(8px);
+}
+
+.chatMessageBg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+}
+
+.chatMessageAuthor {
+  font-weight: bold;
+  color: var(--gray-12);
 }

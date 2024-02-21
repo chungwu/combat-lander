@@ -1,4 +1,4 @@
-import { ClientMessage, FullSyncMessage, GameInputEvent, PartialSyncMessage, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
+import { ChatMessage, ClientMessage, FullSyncMessage, GameInputEvent, PartialSyncMessage, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
 import PartySocket from "partysocket";
 import { GameOptions, LanderGameState } from "./game-state";
 import { BaseLanderEngine } from "./engine";
@@ -6,11 +6,13 @@ import assert from "assert";
 import { CLIENT_SNAPSHOT_FREQ, CLIENT_SNAPSHOT_GC_FREQ, PARTIAL_SYNC_FREQ } from "./constants";
 import { computed, makeObservable, observable, runInAction } from "mobx";
 import { KeyboardController } from "./controls";
+import pull from "lodash/pull";
 
 export class ClientLanderEngine extends BaseLanderEngine {
   private lastSyncTimestep: number;
   public controller: KeyboardController;
   public resetPending: ResetPendingMessage | undefined;
+  private chatListeners: ((msg: ChatMessage) => void)[] = [];
   constructor(
     state: LanderGameState,
     private socket: PartySocket,
@@ -118,6 +120,8 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.resetPending = msg;
       } else if (msg.type === "reset-cancelled") {
         this.resetPending = undefined;
+      } else if (msg.type === "chat") {
+        this.chatListeners.forEach(l => l(msg));
       }
     });
   }
@@ -266,5 +270,23 @@ export class ClientLanderEngine extends BaseLanderEngine {
       gameId: this.game.id,
       time: this.timestep
     });
+  }
+
+  sendChat(opts: { message: string}) {
+    this.sendMessage({
+      type: "chat",
+      gameId: this.game.id,
+      time: this.timestep,
+      playerId: this.playerId,
+      message: opts.message
+    });
+  }
+
+  addChatListener(listener: (msg: ChatMessage) => void) {
+    this.chatListeners.push(listener);
+  }
+
+  removeChatListener(listener: (msg: ChatMessage) => void) {
+    pull(this.chatListeners, listener);
   }
 }

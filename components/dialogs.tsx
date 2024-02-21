@@ -63,7 +63,15 @@ export function ResetGameDialog(props: {
 }) {
   const { onStart, isOpen, onClose } = props;
   return (
-    <Modal underlayBlur {...isOpen == null ? {} : {isOpen}}>
+    <Modal 
+      underlayBlur 
+      onOpenChange={open => {
+        if (!open) {
+          onClose?.();
+        }
+      }}
+      {...isOpen == null ? {} : {isOpen}}
+    >
       {({close}) => (
         <Form
           style={{display: "flex", flexDirection: "column", gap: 24}}
@@ -222,5 +230,89 @@ export function PlayerInfoDialog(props: {
       )}
     </Modal>
   );
+}
 
+
+export function JoinGameDialog(props: {
+  defaultName: string;
+  onJoin: (opts: {name: string}) => void;
+}) {
+  const { onJoin, defaultName } = props;
+  return (
+    <Modal underlayBlur>
+      {({close}) => (
+        <Form
+          style={{display: "flex", flexDirection: "column", gap: 24}}
+          onSubmit={e => {
+            e.preventDefault();
+            const data = Object.fromEntries(new FormData(e.currentTarget));
+            onJoin({name: data.name.toString()});
+            close();
+          }}
+        >
+          <Heading slot="title">Join this game</Heading>
+          <TextField 
+            label="Your name"
+            name="name" 
+            defaultValue={defaultName}
+            autoFocus
+            autoSelectAll
+          />
+          <div style={{display: "flex", gap: 24}}>
+            <Button type="submit" styleType="primary">Join!</Button>
+            <Button styleType="clear" onPress={close}>Nah...</Button>
+          </div>
+        </Form>
+      )}
+    </Modal>
+  );
+}
+
+export function ChatDialog(props: {
+  onSend: (opts: {message: string}) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+}) {
+  const { onSend, isOpen, onClose } = props;
+  return (
+    <Modal 
+      underlayBlur 
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose?.();
+        }
+      }}
+      {...isOpen == null ? {} : {isOpen}} 
+    >
+      {({close}) => (
+        <Form
+          style={{display: "flex", flexDirection: "column", gap: 24}}
+          onSubmit={e => {
+            e.preventDefault();
+            const data = new FormData(e.currentTarget);
+            const message = data.get("message")?.toString();
+            if (message) {
+              onSend({message});
+            }
+            close();
+            onClose?.();
+          }}
+        >
+          <TextField 
+            label="Message" 
+            name="message"
+            autoFocus
+            autoComplete="off"
+          />
+          <div style={{display: "flex", gap: 24}}>
+            <Button type="submit" styleType="primary">Send</Button>
+            <Button styleType="clear" onPress={() => {
+              close();
+              onClose?.();
+            }}>Nevermind...</Button>
+          </div>
+        </Form>
+      )}
+    </Modal>
+  );
 }

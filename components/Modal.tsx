@@ -9,9 +9,10 @@ export function Modal(props: {
   underlayBlur?: boolean;
   modalBlur?: boolean;
   isOpen?: boolean;
-  modalType?: "dialog" | "alertdialog"
+  modalType?: "dialog" | "alertdialog";
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const { children, underlayBlur, modalBlur, isOpen, modalType, ...rest } = props;
+  const { children, underlayBlur, modalBlur, isOpen, modalType, onOpenChange, ...rest } = props;
   return (
     <ModalOverlay
       className={classNames("app", "dark", MONO.variable, sty.underlay, {
@@ -22,6 +23,7 @@ export function Modal(props: {
         backdropFilter: underlayBlur ? "blur(8px)" : undefined,
       }}
       isDismissable={modalType === "alertdialog" ? false : true}
+      onOpenChange={onOpenChange}
     >
       <div
         onKeyDown={e => e.stopPropagation()}

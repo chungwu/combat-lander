@@ -51,7 +51,21 @@ export interface PlayerInfoMessage extends Message {
   name: string;
 }
 
-export type ClientMessage = JoinMessage | PlayerInputMessage | RequestResetGameMessage | CancelResetGameMessage | RequestStartGameMessage | RequestFullSyncMessage | PlayerInfoMessage;
+export interface ChatMessage extends Message {
+  type: "chat";
+  playerId: string;
+  message: string;
+}
+
+export type ClientMessage = 
+  | JoinMessage 
+  | PlayerInputMessage 
+  | RequestResetGameMessage 
+  | CancelResetGameMessage 
+  | RequestStartGameMessage 
+  | RequestFullSyncMessage 
+  | PlayerInfoMessage 
+  | ChatMessage;
 
 export interface InitMessage extends Message {
   type: "init";
@@ -97,6 +111,7 @@ export type ServerMessage =
   | ResetGameMessage
   | PlayerInputMessage
   | ResetPendingMessage
-  | ResetCancelledMessage;
+  | ResetCancelledMessage
+  | ChatMessage;
 
 export type FullSerializedGameState = ReturnType<typeof LanderGameState.prototype.serializeFull>;
