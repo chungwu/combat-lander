@@ -18,8 +18,8 @@ export default function App({ Component, pageProps }: AppProps) {
       <div className={`app dark ${MONO.variable}`}>
         <Component {...pageProps} />
       </div>
-      {process.env.NEXT_GOOGLE_ANALYTICS_ID && (
-        <GoogleAnalytics gaId={process.env.NEXT_GOOGLE_ANALYTICS_ID} />
+      {process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID && (
+        <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS_ID} />
       )}
     </>
   );
