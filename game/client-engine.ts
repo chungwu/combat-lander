@@ -148,7 +148,12 @@ export class ClientLanderEngine extends BaseLanderEngine {
       // started from the snapshot we just created. But we forceRestore, so we
       // make sure the snapshot we just inserted will be used, even if it's the
       // same time as now.
-      this.restoreApplyReplay(msg.time, () => 0, {forceRestore: true});
+      this.restoreApplyReplay(
+        msg.time, 
+        // Even though restore would restore this snapshot, we explicitly want
+        // to do a full merge, not a partial merge, for these full sync messages
+        () => this.game.mergeFull(msg.payload)
+      );
       this.lastSyncTimestep = msg.time;
     } else {
       const lastServerKnownTimesteps = msg.lastPlayerInputTimesteps[this.playerId] ?? [];
