@@ -37,7 +37,7 @@ export class Rocket extends GameObject {
       id: opts.id,
       ownerLanderId:  lander.id,
       rocketType: opts.rocketType,
-      color: getLanderColor(lander.color, 7)
+      color: getLanderColor(lander.color, 8)
     });
   }
 
