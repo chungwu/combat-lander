@@ -40,7 +40,7 @@ export const ROCKET_STATS = {
   "small": {
     radius: 10,
     initialVelocity: 40,
-    aliveSteps: 60 * 30, // alive for 30s,
+    aliveSteps: 60 * 15, // alive for 15s,
     ammo: 5,
     replenishSteps: 60 * 3, // 3 seconds to replenish a rocket
     impulse: 15000,
@@ -48,7 +48,7 @@ export const ROCKET_STATS = {
   "big": {
     radius: 25,
     initialVelocity: 40,
-    aliveSteps: 60 * 30,
+    aliveSteps: 60 * 15,
     ammo: 1,
     replenishSteps: 60 * 10,
     impulse: 50000,
