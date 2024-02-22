@@ -426,13 +426,13 @@ export class CanvasRenderer {
       const updateIndicators = (rotation: number, vx: number, vy: number) => {
         const angle = Math.abs(radianToDegrees(rotation));
         angleText.text = `Angle: ${angle.toFixed(2)}°`
-        angleText.style.fill = Math.abs(lander.rotation) > LANDING_SAFE_ROTATION ? dangerColor : safeColor;
+        angleText.style.fill = Math.abs(rotation) > LANDING_SAFE_ROTATION ? dangerColor : safeColor;
   
-        vxText.text = `Speed X: ${vx.toFixed(2)}`;
-        vxText.style.fill = vx > LANDING_SAFE_VX ? dangerColor : safeColor;
+        vxText.text = `Speed X: ${Math.abs(vx).toFixed(2)}`;
+        vxText.style.fill = Math.abs(vx) > LANDING_SAFE_VX ? dangerColor : safeColor;
   
-        vyText.text = `Speed Y: ${vy.toFixed(2)}`;
-        vyText.style.fill = vy > LANDING_SAFE_VY ? dangerColor : safeColor;
+        vyText.text = `Speed Y: ${Math.abs(vy).toFixed(2)}`;
+        vyText.style.fill = Math.abs(vy) > LANDING_SAFE_VY ? dangerColor : safeColor;
       }
 
       if (game.wonPlayer?.reason === "landed" && game.wonPlayer.playerId === lander.id) {
