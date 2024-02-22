@@ -21,8 +21,22 @@ export interface GameOptions {
   infiniteFuel: boolean;
 }
 
+export type WinningPlayer = {
+  playerId: string;
+  reason: "landed";
+  landedStats: {
+    vx: number;
+    vy: number;
+    rotation: number;
+  }
+} | {
+  playerId: string;
+  reason: "last-lander";
+}
+
 export class LanderGameState {
-  public winnerPlayerId: string | undefined;
+  
+  public wonPlayer: WinningPlayer | undefined;
   public playerWins: Record<string, number> = {};
   private eventQueue: EventQueue = new EventQueue(true);
 
@@ -73,17 +87,17 @@ export class LanderGameState {
     public rockets: Rocket[],
     public options: GameOptions,
   ) {
-    this.winnerPlayerId = undefined;
+    this.wonPlayer = undefined;
     makeObservable(this, {
       landers: observable,
       rockets: observable,
-      winnerPlayerId: observable,
+      wonPlayer: observable,
       playerWins: observable,
     });
   }
 
   step(timestep: number) {
-    if (this.winnerPlayerId) {
+    if (this.wonPlayer) {
       return;
     }
 
@@ -99,7 +113,8 @@ export class LanderGameState {
     this.eventQueue.drainContactForceEvents(event => {
       const force = event.maxForceMagnitude() * 0.001;
       const processCollision = (lander: Lander, obj: GameObject) => {
-        if (!lander.isAlive() || lander.id === this.winnerPlayerId) {
+        if (!lander.isAlive() || lander.id === this.wonPlayer?.playerId) {
+          // No more damage if you've won
           return;
         }
         if (obj instanceof Ground) {
@@ -239,7 +254,7 @@ export class LanderGameState {
       landers: this.landers.map(l => l.serialize()),
       rockets: this.rockets.map(r => r.serialize()),
       landingPads: this.landingPads.map(l => l.serialize()),
-      winnerPlayerId: this.winnerPlayerId,
+      wonPlayer: this.wonPlayer,
       playerWins: this.playerWins,
       options: this.options,
     };
@@ -272,7 +287,7 @@ export class LanderGameState {
   serializeMeta() {
     return {
       id: this.id,
-      winnerPlayerId: this.winnerPlayerId,
+      wonPlayer: this.wonPlayer,
       playerWins: this.playerWins,
     };
   }
@@ -296,7 +311,7 @@ export class LanderGameState {
       this.landingPads[i].mergeFrom(this.world, payload.landingPads[i]);
     }
 
-    this.winnerPlayerId = payload.winnerPlayerId;
+    this.wonPlayer = payload.wonPlayer;
     this.playerWins = payload.playerWins;
     prevWorld.free();
   }
@@ -317,7 +332,7 @@ export class LanderGameState {
 
   mergeMeta(payload: ReturnType<typeof this.serializeMeta>) {
     this.id = payload.id;
-    this.winnerPlayerId = payload.winnerPlayerId;
+    this.wonPlayer = payload.wonPlayer;
     this.playerWins = payload.playerWins;
   }
 

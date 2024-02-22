@@ -167,12 +167,14 @@ const MajorGameMessage = observer(function MajorGameMessage(props: {
 }) {
   const engine = useClientEngine();
   const game = engine.game;
-  if (game.winnerPlayerId) {
-    const lander = game.landers.find(l => l.id === game.winnerPlayerId);
+  if (game.wonPlayer) {
+    const lander = game.landers.find(l => l.id === game.wonPlayer?.playerId);
     return (
       <Modal modalBlur isOpen modalType="alertdialog">
         <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 24}}>
-          <Heading slot="title">{lander?.name} has won!!!</Heading>
+          <Heading slot="title">
+            {game.wonPlayer.reason === "last-lander" ? `${lander?.name} is last lander standing!` : `${lander?.name} has landed!`}
+          </Heading>
           {engine.resetPending && (
             <div>
               Restarting in <TimerTill target={engine.resetPending.resetTimestamp!}/>s...
@@ -181,15 +183,28 @@ const MajorGameMessage = observer(function MajorGameMessage(props: {
         </div>
       </Modal>
     );
-  } else if (engine.resetPending) {
+  } else if (engine.resetPending && engine.resetPending.cause !== "won") {
     return (
       <Modal modalBlur isOpen modalType="alertdialog">
         <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 24}}>
-          <Heading slot="title">{engine.resetPending.cause === "requested" ? "Starting new game" : "Restarting"} in <TimerTill target={engine.resetPending.resetTimestamp}/>s...</Heading>
-          {engine.resetPending.cause === "requested" && (
-            <div>
-              <Button autoFocus onPress={() => engine.cancelResetGame()}>Cancel!</Button>
-            </div>
+          {engine.resetPending.cause === "dead" ? (
+            <>
+              <Heading slot="title">
+                Everyone crashed!
+              </Heading>
+              <div>
+                Restarting in <TimerTill target={engine.resetPending.resetTimestamp}/>s...
+              </div>
+            </>
+          ) : (
+            <>
+              <Heading slot="title">
+                Starting new game in <TimerTill target={engine.resetPending.resetTimestamp}/>s...
+              </Heading>
+              <div>
+                <Button autoFocus onPress={() => engine.cancelResetGame()}>Cancel!</Button>
+              </div>
+            </>
           )}
         </div>
       </Modal>

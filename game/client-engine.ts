@@ -69,7 +69,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
         return;
       }
       console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg);
-      if ((msg.type === "full" || msg.type === "partial") && !this.game.winnerPlayerId) {
+      if ((msg.type === "full" || msg.type === "partial") && !this.game.wonPlayer) {
         // msg.time should always be > this.lastSyncTimestep as we don't expect
         // to receive sync messages out of order. It is, however, possible to 
         // receive the sync twice for the same time step, if there are two player
@@ -145,8 +145,10 @@ export class ClientLanderEngine extends BaseLanderEngine {
         }
       });
       // We restore and reply, but don't need to do a merge anymore, as we
-      // started from the snapshot we just created.
-      this.restoreApplyReplay(msg.time, () => 0);
+      // started from the snapshot we just created. But we forceRestore, so we
+      // make sure the snapshot we just inserted will be used, even if it's the
+      // same time as now.
+      this.restoreApplyReplay(msg.time, () => 0, {forceRestore: true});
       this.lastSyncTimestep = msg.time;
     } else {
       const lastServerKnownTimesteps = msg.lastPlayerInputTimesteps[this.playerId] ?? [];

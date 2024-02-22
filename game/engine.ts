@@ -55,9 +55,9 @@ export class BaseLanderEngine {
     }
   }
 
-  protected restoreApplyReplay(restoreTime: number, func: () => void) {
+  protected restoreApplyReplay(restoreTime: number, func: () => void, opts?: {forceRestore?: boolean}) {
     const curTime = this.timestep;
-    if (this.restoreSnapshotTo(restoreTime)) {
+    if (this.restoreSnapshotTo(restoreTime, opts)) {
       func();
       this.replayTo(curTime);
       return true;
@@ -115,8 +115,15 @@ export class BaseLanderEngine {
     this.timestep = snapshot.time;
   }
 
-  protected restoreSnapshotTo(time: number) {
-    if (time === this.timestep) {
+  /**
+   * Restores to the closest snapshot for the argument time.
+   * @param opts.forceRestore - if `time` is equal to current time, then
+   *   we skip the restore by default, assuming that the restore is
+   *   unnecessary. Passing true here will for force the restore to happen;
+   *   do it if you know the snapshot is different from the current state.
+   */
+  protected restoreSnapshotTo(time: number, opts?: {forceRestore?: boolean}) {
+    if (time === this.timestep && !opts?.forceRestore) {
       return true;
     }
     const snapshot = this.findClosestSnapshot(time);

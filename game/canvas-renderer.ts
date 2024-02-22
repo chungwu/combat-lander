@@ -233,28 +233,29 @@ export class CanvasRenderer {
     this.viewport.worldHeight = game.moon.worldHeight;
 
     const minZoom = this.viewport.screenWidth / this.viewport.worldWidth;
-    const selfLander = playerId ? game.landers.find(l => l.id === playerId) : undefined;
-    if (selfLander) {
+    const focusedLanderId = game.wonPlayer ? game.wonPlayer.playerId : playerId;
+    const focusedLander = focusedLanderId ? game.landers.find(l => l.id === focusedLanderId) : undefined;
+    if (focusedLander && focusedLander.isAlive()) {
       this.viewport.scaled = Math.max(1, minZoom);
 
       // selfLander is to the left of the viewport left edge, so it must have
       // been just transported / wrapped; transport the viewport as well
-      if (selfLander.translation.x < this.viewport.left) {
+      if (focusedLander.translation.x < this.viewport.left) {
         this.viewport.left -= game.moon.worldWidth;
       }
 
       // Similarly, selfLander is to the right of the viewport right edge,
       // so it was also transported; follow as well
-      if (selfLander.translation.x > this.viewport.right) {
+      if (focusedLander.translation.x > this.viewport.right) {
         this.viewport.right += game.moon.worldWidth;
       }
 
       const marginX = this.viewport.screenWidthInWorldPixels * 0.3;
-      this.viewport.left = Math.min(this.viewport.left, selfLander.translation.x - marginX);
-      this.viewport.right = Math.max(this.viewport.right, selfLander.translation.x + marginX);
+      this.viewport.left = Math.min(this.viewport.left, focusedLander.translation.x - marginX);
+      this.viewport.right = Math.max(this.viewport.right, focusedLander.translation.x + marginX);
 
       const marginYTop = this.viewport.screenHeightInWorldPixels * 0.2;
-      this.viewport.top = Math.min(this.viewport.top, (this.viewport.worldHeight - selfLander.translation.y) - marginYTop);
+      this.viewport.top = Math.min(this.viewport.top, (this.viewport.worldHeight - focusedLander.translation.y) - marginYTop);
       
       // Move the viewport bottom to follow the lander down, but don't move
       // lower than 200 past ground level in portrait mode, so we can make
@@ -263,9 +264,8 @@ export class CanvasRenderer {
       const minBottom = isPortrait() ? this.viewport.worldHeight + 200 : this.viewport.worldHeight + 50;
       this.viewport.bottom = Math.min(minBottom, Math.max(
         this.viewport.bottom, 
-        (this.viewport.worldHeight - selfLander.translation.y) + marginYBottom,
+        (this.viewport.worldHeight - focusedLander.translation.y) + marginYBottom,
       ));
-
     } else {
       this.viewport.scaled = minZoom;
       this.viewport.bottom = game.moon.worldHeight;
@@ -410,27 +410,37 @@ export class CanvasRenderer {
     let landingIndicator = ensureInstance(gfx.getChildByName("landingIndicator"), Container);
     const pad = game.findClosestPad(lander);
     const distance = vectorDistance(pad, lander);
-    if (distance < LANDING_INDICATOR_THRESHOLD && lander.id === playerId) {
+    if (
+      (lander.id === playerId && distance < LANDING_INDICATOR_THRESHOLD) ||
+      (game.wonPlayer?.reason === "landed" && game.wonPlayer.playerId === lander.id)
+    ) {
       landingIndicator.visible = true;
 
-      const angle = Math.abs(radianToDegrees(lander.rotation));
-      const vx = Math.abs(lander.body.linvel().x);
-      const vy = Math.abs(lander.body.linvel().y);
+      const angleText = ensureInstance(landingIndicator.getChildAt(0), Text); 
+      const vxText = ensureInstance(landingIndicator.getChildAt(1), Text);
+      const vyText = ensureInstance(landingIndicator.getChildAt(2), Text);
 
       const safeColor = greenDark.green10;
       const dangerColor = tomatoDark.tomato10;
 
-      const angleText = ensureInstance(landingIndicator.getChildAt(0), Text); 
-      angleText.text = `Angle: ${angle.toFixed(2)}°`
-      angleText.style.fill = Math.abs(lander.rotation) > LANDING_SAFE_ROTATION ? dangerColor : safeColor;
+      const updateIndicators = (rotation: number, vx: number, vy: number) => {
+        const angle = Math.abs(radianToDegrees(rotation));
+        angleText.text = `Angle: ${angle.toFixed(2)}°`
+        angleText.style.fill = Math.abs(lander.rotation) > LANDING_SAFE_ROTATION ? dangerColor : safeColor;
+  
+        vxText.text = `Speed X: ${vx.toFixed(2)}`;
+        vxText.style.fill = vx > LANDING_SAFE_VX ? dangerColor : safeColor;
+  
+        vyText.text = `Speed Y: ${vy.toFixed(2)}`;
+        vyText.style.fill = vy > LANDING_SAFE_VY ? dangerColor : safeColor;
+      }
 
-      const vxText = ensureInstance(landingIndicator.getChildAt(1), Text);
-      vxText.text = `Speed X: ${vx.toFixed(2)}`;
-      vxText.style.fill = vx > LANDING_SAFE_VX ? dangerColor : safeColor;
-
-      const vyText = ensureInstance(landingIndicator.getChildAt(2), Text);
-      vyText.text = `Speed Y: ${vy.toFixed(2)}`;
-      vyText.style.fill = vy > LANDING_SAFE_VY ? dangerColor : safeColor;
+      if (game.wonPlayer?.reason === "landed" && game.wonPlayer.playerId === lander.id) {
+        const stats = game.wonPlayer.landedStats;
+        updateIndicators(stats.rotation, stats.vx, stats.vy);
+      } else {
+        updateIndicators(lander.rotation, lander.body.linvel().x, lander.body.linvel().y);
+      }
     } else {
       landingIndicator.visible = false;
       landerHealth.visible = true;

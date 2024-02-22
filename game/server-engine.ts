@@ -184,39 +184,47 @@ export class ServerLanderEngine extends BaseLanderEngine {
     // If the game is still ongoing...
     if (!this.resetTimestamp) {
       // Check if anyone has won
-      if (!this.game.winnerPlayerId) {
+      if (!this.game.wonPlayer) {
         // if any lander has successfully landed, that lander wins
         for (const lander of this.game.landers) {
           if (lander.isAlive()) {
             const pad = this.game.isSafelyLanded(lander);
             if (pad) {
-              this.game.winnerPlayerId = lander.id;
+              this.game.wonPlayer = {
+                playerId: lander.id,
+                reason: "landed",
+                landedStats: {
+                  vx: lander.body.linvel().x,
+                  vy: lander.body.linvel().y,
+                  rotation: lander.rotation,
+                }
+              };
               this.game.addWins(lander.id, LANDING_PAD_STATS[pad.type].multiplier);
             }
           }
         }
-  
+      }
+
+      if (!this.game.wonPlayer) {
         // if any lander is the last one standing, that lander wins
         const controlledLanders = this.game.landers.filter(l => this.viewerIds.includes(l.id));
         const aliveLanders = controlledLanders.filter(l => l.isAlive());
         if (controlledLanders.length > 1 && aliveLanders.length === 1) {
-          this.game.winnerPlayerId = aliveLanders[0].id
+          this.game.wonPlayer = {
+            playerId: aliveLanders[0].id,
+            reason: "last-lander"
+          };
           this.game.addWins(aliveLanders[0].id, 1);
         }
       }
 
       // Restart the game if there's a winner, or if every lander is dead
-      if (
-        this.game.winnerPlayerId || 
-        (
-          this.game.landers.length > 0 && 
-          this.game.landers.every(l => !l.isAlive())
-        )
-      ) {
+      const allPlayersDead = this.game.landers.length > 0 && this.game.landers.every(l => !l.isAlive());
+      if (this.game.wonPlayer || allPlayersDead) {
         const waitTime = 1000 * END_GAME_WAIT;
         this.resetTimestamp = new Date().getTime() + waitTime;
         this.broadcast(this.makeMetaMessage());
-        this.broadcast(this.makeResetPendingMessage(this.game.winnerPlayerId ? "won" : "dead", this.resetTimestamp));
+        this.broadcast(this.makeResetPendingMessage(this.game.wonPlayer ? "won" : "dead", this.resetTimestamp));
         setTimeout(() => {
           if (this.resetTimestamp != undefined) {
             this.resetGame(this.game.options, { preserveMap: false, preserveScores: true});
