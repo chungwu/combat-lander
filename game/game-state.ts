@@ -265,12 +265,12 @@ export class LanderGameState {
       ...snapshot,
       world: World.restoreSnapshot(snapshot.world)
     };
-    this.mergeFull(snapshot2);
+    this.mergePartial(snapshot2);
   }
 
   takeSnapshot() {
     return {
-      ...this.serializeFull(),
+      ...this.serializePartial(),
       world: this.world.takeSnapshot()
     }
   }
