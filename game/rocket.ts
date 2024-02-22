@@ -16,7 +16,6 @@ const SERIALIZED_FIELDS = [
 SERIALIZED_FIELDS satisfies readonly (keyof Rocket)[];
 
 export class Rocket extends GameObject {
-  public id: string;
   public rocketType: RocketType;
   public ownerLanderId: string;
   public aliveSteps: number = 0;
@@ -55,8 +54,7 @@ export class Rocket extends GameObject {
     rocketType: RocketType;
     color: string;
   }) {
-    super(collider);
-    this.id = opts.id;
+    super(opts.id, collider);
     this.ownerLanderId = opts.ownerLanderId;
     this.rocketType = opts.rocketType;
     this.color = opts.color;

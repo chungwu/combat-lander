@@ -22,19 +22,19 @@ function isPortrait() {
 }
 
 export class CanvasRenderer {
-  handle2gfx: Map<number, RenderedObjects>;
-  handle2label: Map<number, DisplayObject | null>;
+  id2gfx: Map<string, RenderedObjects>;
+  id2label: Map<string, DisplayObject | null>;
   renderer: Renderer;
   root: Container;
   viewport: Viewport;
   screenRoot: Container;
   curGameId: string | undefined;
-  handle2trails: Map<number, RenderedObjects[]>;
+  id2trails: Map<string, RenderedObjects[]>;
 
   constructor() {
-    this.handle2gfx = new Map();
-    this.handle2label = new Map();
-    this.handle2trails = new Map();
+    this.id2gfx = new Map();
+    this.id2label = new Map();
+    this.id2trails = new Map();
     this.renderer = new Renderer({
       antialias: true,
       width: window.innerWidth,
@@ -80,9 +80,9 @@ export class CanvasRenderer {
   private reset() {
     this.clearContainer(this.screenRoot);
     this.clearContainer(this.viewport);
-    this.handle2gfx.clear();
-    this.handle2label.clear();
-    this.handle2trails.clear();
+    this.id2gfx.clear();
+    this.id2label.clear();
+    this.id2trails.clear();
   }
 
   private updateLegend(game: LanderGameState) {
@@ -124,17 +124,17 @@ export class CanvasRenderer {
     }
 
     this.updateViewport(game, playerId);
-    const seenHandles = new Set<number>();
+    const seenHandles = new Set<string>();
 
     const handleObject = (object: GameObject) => {
-      seenHandles.add(object.handle);
-      let gfxs = this.handle2gfx.get(object.handle);
+      seenHandles.add(object.id);
+      let gfxs = this.id2gfx.get(object.id);
       if (!gfxs) {
         const main = this.createObjectGraphics(object, game);
         const left = this.createObjectGraphics(object, game);
         const right = this.createObjectGraphics(object, game);
         gfxs = [main, left, right];
-        this.handle2gfx.set(object.handle, gfxs);
+        this.id2gfx.set(object.id, gfxs);
       } else {
         const [main, left, right] = gfxs;
         this.updateObjectGraphics(object, main);
@@ -143,15 +143,15 @@ export class CanvasRenderer {
       }
       updateObjectGraphicsPositions(object, gfxs);
       
-      if (!this.handle2label.has(object.handle)) {
+      if (!this.id2label.has(object.id)) {
         const label = this.createObjectLabel(object);
         if (label) {
-          this.handle2label.set(object.handle, label);
+          this.id2label.set(object.id, label);
         } else {
-          this.handle2label.set(object.handle, null);
+          this.id2label.set(object.id, null);
         }
       }
-      const label = this.handle2label.get(object.handle);
+      const label = this.id2label.get(object.id);
       if (label) {
         this.updateObjectLabel(game, object, label, playerId);
         updateObjectLabelPositions(game, object, label);
@@ -191,9 +191,9 @@ export class CanvasRenderer {
       handleObject(pad);
     }
 
-    for (const [ handle, gfxs ] of Array.from(this.handle2gfx.entries())) {
-      if (!seenHandles.has(handle)) {
-        this.destroyHandle(handle);
+    for (const [ id, gfxs ] of Array.from(this.id2gfx.entries())) {
+      if (!seenHandles.has(id)) {
+        this.destroyRelatedGraphics(id);
       }
     }
 
@@ -202,23 +202,23 @@ export class CanvasRenderer {
     this.renderer.render(this.root);
   }
   
-  private destroyHandle(handle: number) {
-    const gfxs = this.handle2gfx.get(handle);
+  private destroyRelatedGraphics(id: string) {
+    const gfxs = this.id2gfx.get(id);
     if (gfxs) {
       for (const gfx of gfxs) {
         gfx.destroy();
         this.viewport.removeChild(gfx);
       }
     }
-    this.handle2gfx.delete(handle);
+    this.id2gfx.delete(id);
 
-    const gfx = this.handle2label.get(handle);
+    const gfx = this.id2label.get(id);
     if (gfx) {
       gfx.destroy();
       this.screenRoot.removeChild(gfx);
     }
 
-    const trails = this.handle2trails.get(handle);
+    const trails = this.id2trails.get(id);
     if (trails) {
       for (const trail of trails) {
         for (const gfx of trail) {
@@ -354,10 +354,10 @@ export class CanvasRenderer {
   private updateLanderTrails(game: LanderGameState, lander: Lander, time: number) {
     const stepsPerDot = LANDER_TRAIL_LIFE / LANDER_TRAIL_LENGTH * 60;
     if (time % stepsPerDot === 0) {
-      let trails = this.handle2trails.get(lander.handle);
+      let trails = this.id2trails.get(lander.id);
       if (!trails) {
         trails = [];
-        this.handle2trails.set(lander.handle, trails);
+        this.id2trails.set(lander.id, trails);
       }
       let newTrail: RenderedObjects;
       if (trails.length === LANDER_TRAIL_LENGTH) {

@@ -1,8 +1,8 @@
 import { Collider, ColliderDesc, RigidBodyDesc, World } from "@dimforge/rapier2d";
 import { LANDING_PAD_STATS, LandingPadType } from "../constants";
-import { LanderGameState } from "../game-state";
 import { GameObject } from "./game-object";
 import { Moon } from "../map";
+import { nanoid } from "nanoid";
 
 interface LandingPadOpts {
   type: LandingPadType;
@@ -21,22 +21,23 @@ export class LandingPad extends GameObject {
       colliderDesc,
       body
     );
-    return new LandingPad(collider, {type: pad.type});
+    return new LandingPad(nanoid(), collider, {type: pad.type});
   }
 
   static createFrom(world: World, moon: Moon, padIndex: number, payload: ReturnType<typeof LandingPad.prototype.serialize>) {
     const pad = moon.landingPads[padIndex];
     const collider = world.getCollider(payload.handle);
-    return new LandingPad(collider, { type: pad.type });
+    return new LandingPad(payload.id, collider, { type: pad.type });
   }
 
-  constructor(collider: Collider, opts: LandingPadOpts) {
-    super(collider);
+  constructor(id: string, collider: Collider, opts: LandingPadOpts) {
+    super(id, collider);
     this.type = opts.type;
   }
 
   serialize() {
     return {
+      id: this.id,
       handle: this.handle,
     };
   }

@@ -1,6 +1,7 @@
 import Rapier, { Collider, World } from "@dimforge/rapier2d";
 import { Moon } from "../map";
 import { GameObject } from "./game-object";
+import { nanoid } from "nanoid";
 
 export class Sky extends GameObject {
   static create(world: World, moon: Moon) {
@@ -10,25 +11,25 @@ export class Sky extends GameObject {
       colliderDesc,
       body
     );
-    return new Sky(collider);
+    return new Sky(nanoid(), collider);
   }
 
   static createFrom(world: World, payload: ReturnType<typeof Sky.prototype.serialize>) {
-    return new Sky(world.getCollider(payload.handle));
+    return new Sky(payload.id, world.getCollider(payload.handle));
   }
 
-  constructor(collider: Collider) {
-    super(collider);
+  constructor(id: string, collider: Collider) {
+    super(id, collider);
   }
 
   serialize() {
     return {
+      id: this.id,
       handle: this.handle
     };
   }
 
   mergeFrom(world: World, opts: ReturnType<typeof this.serialize>) {
-    const collider = world.getCollider(opts.handle);
-    this.collider = collider;
+    this.updateCollider(world, opts.handle);
   }
 }

@@ -5,7 +5,8 @@ import assert from "assert";
 
 export abstract class GameObject {
   constructor(
-    public collider: Collider
+    public id: string,
+    public collider: Collider,
   ) {
 
   }

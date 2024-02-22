@@ -27,7 +27,6 @@ const SERIALIZED_FIELDS = [
 SERIALIZED_FIELDS satisfies readonly (keyof Lander)[];
 
 export class Lander extends GameObject {
-  public id: string;
   public name: string;
   public color: LanderColor;
   public throttle: number = 0;
@@ -86,8 +85,7 @@ export class Lander extends GameObject {
   }
 
   constructor(collider: Collider, opts: LanderOpts) {
-    super(collider);
-    this.id = opts.id;
+    super(opts.id, collider);
     this.name = opts.name;
     this.color = opts.color;
     makeObservable(this, {
