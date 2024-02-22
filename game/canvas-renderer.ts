@@ -6,7 +6,7 @@ import { grayDark, greenDark, tomatoDark, yellowDark } from "@radix-ui/colors";
 import assert from "assert";
 import { Viewport } from "pixi-viewport";
 import { Container, DisplayObject, Graphics, Renderer, Text } from "pixi.js";
-import { LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, WORLD_WIDTH, getLanderColor } from "./constants";
+import { LANDER_TRAIL_LENGTH, LANDER_TRAIL_LIFE, LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, WORLD_WIDTH, getLanderColor } from "./constants";
 import { LanderGameState } from "./game-state";
 import { GameObject } from "./objects/game-object";
 import { Ground } from "./objects/ground";
@@ -29,10 +29,12 @@ export class CanvasRenderer {
   viewport: Viewport;
   screenRoot: Container;
   curGameId: string | undefined;
+  handle2trails: Map<number, RenderedObjects[]>;
 
   constructor() {
     this.handle2gfx = new Map();
     this.handle2label = new Map();
+    this.handle2trails = new Map();
     this.renderer = new Renderer({
       antialias: true,
       width: window.innerWidth,
@@ -80,6 +82,7 @@ export class CanvasRenderer {
     this.clearContainer(this.viewport);
     this.handle2gfx.clear();
     this.handle2label.clear();
+    this.handle2trails.clear();
   }
 
   private updateLegend(game: LanderGameState) {
@@ -112,7 +115,7 @@ export class CanvasRenderer {
     this.viewport.screenHeight = window.innerHeight;
   }
 
-  render(game: LanderGameState, playerId: string) {
+  render(game: LanderGameState, playerId: string, time: number) {
     if (!this.curGameId || this.curGameId !== game.id) {
       // Game changed!  Clear everything
       this.reset();
@@ -179,6 +182,7 @@ export class CanvasRenderer {
     handleObject(game.sky);
     for (const lander of game.landers) {
       handleObject(lander);
+      this.updateLanderTrails(game, lander, time);
     }
     for (const rocket of game.rockets) {
       handleObject(rocket);
@@ -207,6 +211,22 @@ export class CanvasRenderer {
       }
     }
     this.handle2gfx.delete(handle);
+
+    const gfx = this.handle2label.get(handle);
+    if (gfx) {
+      gfx.destroy();
+      this.screenRoot.removeChild(gfx);
+    }
+
+    const trails = this.handle2trails.get(handle);
+    if (trails) {
+      for (const trail of trails) {
+        for (const gfx of trail) {
+          gfx.destroy();
+          this.viewport.removeChild(gfx);
+        }
+      }
+    }
   }
 
   private updateViewport(game: LanderGameState, playerId: string) {
@@ -328,6 +348,46 @@ export class CanvasRenderer {
 
     if (!lander.isAlive()) {
       container.alpha = 0.5;
+    }
+  }
+
+  private updateLanderTrails(game: LanderGameState, lander: Lander, time: number) {
+    const stepsPerDot = LANDER_TRAIL_LIFE / LANDER_TRAIL_LENGTH * 60;
+    if (time % stepsPerDot === 0) {
+      let trails = this.handle2trails.get(lander.handle);
+      if (!trails) {
+        trails = [];
+        this.handle2trails.set(lander.handle, trails);
+      }
+      let newTrail: RenderedObjects;
+      if (trails.length === LANDER_TRAIL_LENGTH) {
+        newTrail = trails.shift()!;
+      } else {
+        const createDot = () => {
+          const gfx = new Graphics();
+          gfx.beginFill(getLanderColor(lander.color, 10));
+          gfx.drawCircle(0, 0, 1);
+          this.viewport.addChild(gfx);
+          return gfx;
+        };
+        newTrail = [createDot(), createDot(), createDot()];
+      }
+      trails.push(newTrail);
+
+      newTrail.forEach((gfx, i) => {
+        gfx.position.x = (
+          i === 0 ? lander.x :
+          i === 1 ? lander.x - game.moon.worldWidth :
+          lander.x + game.moon.worldWidth
+        );
+        gfx.position.y = this.viewport.worldHeight - lander.y;
+      });
+
+      trails.forEach((dots, i) => {
+        dots.forEach(gfx => {
+          gfx.alpha = i / trails!.length;
+        });
+      });
     }
   }
 

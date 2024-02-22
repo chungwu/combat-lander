@@ -30,6 +30,8 @@ export const THROTTLE_RATE = 2;
 export const FULL_THROTTLE_FORCE = 50000;
 export const THROTTLE_FUEL_BURN_RATE = 3;
 export const ROTATE_FUEL_BURN_RATE = 1;
+export const LANDER_TRAIL_LENGTH = 60;
+export const LANDER_TRAIL_LIFE = 10; // 10s
 
 export const LANDING_INDICATOR_THRESHOLD = 150;
 export const LANDING_SAFE_ROTATION = degreesToRadians(5); // 5 degrees

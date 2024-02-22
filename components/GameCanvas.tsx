@@ -1,6 +1,7 @@
 import React from "react";
 import { LanderGameState } from "@/game/game-state";
 import type CanvasRenderer from "@/game/canvas-renderer";
+import { useClientEngine } from "./contexts";
 
 export function GameCanvas(props: {
   game: LanderGameState;
@@ -9,6 +10,7 @@ export function GameCanvas(props: {
   const { game, playerId } = props;
 
   const canvasContainerRef = React.useRef<HTMLDivElement>(null);
+  const engine = useClientEngine();
 
   const [ renderer, setRenderer ] = React.useState<null | CanvasRenderer>(null);
 
@@ -35,10 +37,10 @@ export function GameCanvas(props: {
 
   React.useEffect(() => {
     if (game && renderer) {
-      renderer.render(game, playerId);
+      renderer.render(game, playerId, engine.timestep);
       const id = setInterval(() => {
         if (!(globalThis as any).PAUSE_RENDER) {
-          renderer.render(game, playerId);
+          renderer.render(game, playerId, engine.timestep);
         }
       }, 1000/60);
       return () => clearInterval(id)
