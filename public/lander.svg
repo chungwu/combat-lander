@@ -1,0 +1,21 @@
+<svg width="100" height="100" viewBox="-1 -1 2 2" xmlns="http://www.w3.org/2000/svg" fill="none">
+  <!-- Black round background -->
+  <circle cx="0" cy="0" r="1" fill="black"/>
+  <!-- Adjusting the stroke width for visibility -->
+  <g stroke="white" stroke-width="0.05" fill="none">
+    <!-- Cockpit -->
+    <path d="M -.37 0 L -.43 -.12 L -.38 -.3 L -.3 -.4 L -.1 -.5 L .1 -.5 L .3 -.4 L .38 -.3 L .43 -.12 L .37 0 Z"/>
+    <!-- Middle -->
+    <path d="M -.45 0 L .45 0 L .45 .2 L -.45 .2 L -.45 0 Z"/>
+    <!-- Booster -->
+    <path d="M -.2 .2 L -.3 .45 L .3 .45 L .2 .2 Z"/>
+    <!-- Right Leg -->
+    <path d="M .35 .2 L .45 .5"/>
+    <!-- Left Leg -->
+    <path d="M -.35 .2 L -.45 .5"/>
+    <!-- Right Foot -->
+    <path d="M .5 .5 L .4 .5"/>
+    <!-- Left Foot -->
+    <path d="M -.5 .5 L -.4 .5"/>
+  </g>
+</svg>

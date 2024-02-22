@@ -14,6 +14,7 @@ export default function App({ Component, pageProps }: AppProps) {
       `}</style>
       <Head>
         <title>Combat Lander</title>
+        <link rel="icon" href="lander.svg" />
       </Head>
       <div className={`app dark ${MONO.variable}`}>
         <Component {...pageProps} />
