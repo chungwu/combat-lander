@@ -562,7 +562,7 @@ const KeyboardKey = observer(function KeyboardKey(props: {
   }, [controller, keyboardKey]);
   return (
     <BaseButton
-      className={classNames(sty.key, {[sty.keyTouchable]: isTouchDevice()})} 
+      className={classNames(sty.key)} 
       ref={buttonRef}
       onPress={() => {
         controller.handleKeyEvent({type: "keypress", key: keyboardKey});

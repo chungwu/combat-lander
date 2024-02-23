@@ -63,8 +63,9 @@
 .key {
   display: flex;
   border: 1px solid var(--control-border);
-  width: 24px;
-  height: 24px;
+  width: 48px;
+  height: 48px;
+  font-size: 24px;
   align-items: center;
   justify-content: center;
   font-family: var(--font-mono);
@@ -74,13 +75,9 @@
   color: var(--gray-10);
   transition: all 0.2s;
   backdrop-filter: blur(8px);
-  border-radius: 1px;
-}
-
-.keyTouchable {
-  width: 48px;
-  height: 48px;
-  font-size: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 1px 2px var(--control-border);
 }
 
 .key:focus-visible {
