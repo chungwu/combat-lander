@@ -171,8 +171,22 @@ export class CanvasRenderer {
     };
 
     const updateObjectLabelPositions = (game: LanderGameState, object: GameObject, label: DisplayObject) => {
+      // The object's x position that is currently visible on the screen may be
+      // the main, left, or right copy.  So for the label, we need to get the screen
+      // coordinate of the correct copy
+      let displayedX = object.x;
+      if (this.viewport.left < 0 && object.x >= game.moon.worldWidth + this.viewport.left) {
+        // Here, the viewport's left is rendering the end of the left copy, and we see
+        // that the object is indeed within that slice. So we use the left copy's x
+        displayedX = object.x - game.moon.worldWidth;
+      }
+      if (this.viewport.right > game.moon.worldWidth && object.x < this.viewport.right - game.moon.worldWidth) {
+        // Here, the viewport's right is rendering the start of the right copy, and 
+        // the object is indeed within that slice. So we use the right copy's x
+        displayedX = object.x + game.moon.worldWidth;
+      }
       const screenPos = this.viewport.toScreen(
-        object.x, game.moon.worldHeight - object.y
+        displayedX, game.moon.worldHeight - object.y
       );
       label.position.x = screenPos.x;
       label.position.y = screenPos.y;
