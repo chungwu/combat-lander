@@ -57,7 +57,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
         id: sender.id,
         name: msg.name
       });
-      this.broadcast(this.makeFullMessage());
+      this.broadcast(this.makePartialMessage());
     } else if (msg.type === "input") {
       this.savePlayerEvent(msg);
       
