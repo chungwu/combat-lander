@@ -620,6 +620,7 @@ function useToggleFullScreen() {
 function ChatButton() {
   const engine = useClientEngine();
   const [showForm, setShowForm] = React.useState(false);
+  const formRef = React.useRef<HTMLFormElement>(null);
 
   React.useEffect(() => {
     const listener = (event: KeyboardEvent) => {
@@ -639,8 +640,10 @@ function ChatButton() {
     <div className={sty.topRightRow}>
       {showForm && (
         <Form
+          ref={formRef}
           style={{display: "flex", gap: 8, alignItems: "center"}}
           onSubmit={e => {
+            console.log("SUBMITTED", formRef.current);
             e.preventDefault();
             const data = new FormData(e.currentTarget);
             const message = data.get("message")?.toString();
@@ -673,17 +676,24 @@ function ChatButton() {
           <Button 
             aria-label="Send" 
             type="submit"
+            key="chat-submit"
           >
             <FontAwesomeIcon icon={faPaperPlane}/>
           </Button>
         </Form>
       )}
       {!showForm &&
-        <Button 
+        <Button
           type="button"
           aria-label="Chat" 
+          key="chat-button"
           onPress={(e) => {
-            setShowForm(true);
+            // For some reason, if we don't wrap this in setTimeout, then
+            // this click is interpreted as a click on the submit button
+            // as well, and submits the form immediately...?!?!
+            setTimeout(() => {
+              setShowForm(true);
+            }, 100);
           }}
         >
           <FontAwesomeIcon icon={faMessage}/>
