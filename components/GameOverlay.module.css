@@ -208,28 +208,42 @@
   max-height: 300px;
   pointer-events: none;
   overflow: auto;
+  align-items: flex-end;
+  width: min(45vw, 500px);
+  z-index: var(--z-chats);
+  margin-left: auto;
 }
+
 .chats::-webkit-scrollbar {
   display: none;
+}
+
+.chatInput {
+  font-size: var(--text-size-small);
+}
+
+@media screen and (max-width: 1024px) {
+  .chatInput {
+    width: 150px;
+  }
 }
 
 .chatMessage {
   color: var(--gray-11);
   border-radius: 8px;
-  max-width: 200px;
   padding: 8px;
   font-size: var(--text-size-small);
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
-  align-self: flex-end;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(1px);
 }
 
 .chatMessageBg {
   position: absolute;
   inset: 0;
-  opacity: 0.5;
+  opacity: 0.6;
+  transition: all 0.2s;
 }
 
 .chatMessageAuthor {

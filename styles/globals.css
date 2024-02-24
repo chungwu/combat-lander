@@ -21,7 +21,8 @@
   --control-border-focused: var(--yellow-10);
 
   --z-modal: 10;
-  --z-alert: 9;
+  --z-chats: 5;
+  --z-alert: 4;
   --z-hud: 5;
   --z-screen-effect: 2;
 }

@@ -3,7 +3,7 @@ import { PseudoKeyboardEvent, getControlScheme } from "@/game/controls";
 import { Lander } from "@/game/objects/lander";
 import { blurActive, isFullScreenMode } from "@/utils/dom-utils";
 import { ensure, isTouchDevice, makeShortId } from "@/utils/utils";
-import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp, faBars, faMessage } from "@fortawesome/free-solid-svg-icons";
+import { faArrowDown, faArrowLeft, faArrowRight, faArrowUp, faBars, faMessage, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import classNames from "classnames";
 import sortBy from "lodash/sortBy";
@@ -11,7 +11,7 @@ import { reaction } from "mobx";
 import { observer } from "mobx-react-lite";
 import { useRouter } from "next/router";
 import React from "react";
-import { Button as BaseButton, DialogTrigger, Heading, MenuTrigger } from "react-aria-components";
+import { Button as BaseButton, DialogTrigger, Form, Heading, MenuTrigger } from "react-aria-components";
 import { Joystick, JoystickShape } from "react-joystick-component";
 import { Button } from "./Button";
 import sty from "./GameOverlay.module.css";
@@ -20,7 +20,8 @@ import { Modal } from "./Modal";
 import { ChatDialog, InviteGameDialog, JoinGameDialog, PlayerInfoDialog, ResetGameDialog, StartGameDialog } from "./dialogs";
 import { useClientEngine } from "./contexts";
 import { ChatMessage } from "@/messages";
-import { gray, grayDark } from "@radix-ui/colors";
+import { gray, grayDark, yellowDark } from "@radix-ui/colors";
+import { TextField } from "./TextField";
 
 export const GameOverlay = observer(function GameOverlay() {
   return (
@@ -131,6 +132,9 @@ const TopRight = observer(function TopRight(props: {}) {
               </Menu>
             </Popover>
           </MenuTrigger>
+        </div>
+        <div className={sty.topRightRow}>
+          <ChatButton />
         </div>
         <Chats />
       </div>
@@ -613,11 +617,86 @@ function useToggleFullScreen() {
   };
 }
 
+function ChatButton() {
+  const engine = useClientEngine();
+  const [showForm, setShowForm] = React.useState(false);
+
+  React.useEffect(() => {
+    const listener = (event: KeyboardEvent) => {
+      if (event.key === "t") {
+        event.preventDefault();
+        event.stopPropagation();
+        setShowForm(true);
+      }
+    };
+    document.addEventListener("keypress", listener);
+    return () => {
+      document.removeEventListener("keypress", listener);
+    };
+  }, []);
+
+  return (
+    <div className={sty.topRightRow}>
+      {showForm && (
+        <Form
+          style={{display: "flex", gap: 8, alignItems: "center"}}
+          onSubmit={e => {
+            e.preventDefault();
+            const data = new FormData(e.currentTarget);
+            const message = data.get("message")?.toString();
+            if (message) {
+              engine.sendChat({message});
+            }
+            setShowForm(false);
+          }}
+        >
+          <TextField 
+            className={sty.chatInput}
+            name="message"
+            aria-label="Message"
+            autoFocus
+            autoComplete="off"
+            placeholder="Type a message..."
+            onKeyUp={e => {
+              if (e.key === "Escape") {
+                setShowForm(false);
+              }
+            }}
+            onFocusChange={(focused) => {
+              if (!focused) {
+                setTimeout(() => {
+                  setShowForm(false);
+                }, 100);
+              }
+            }}
+          />
+          <Button 
+            aria-label="Send" 
+            type="submit"
+          >
+            <FontAwesomeIcon icon={faPaperPlane}/>
+          </Button>
+        </Form>
+      )}
+      {!showForm &&
+        <Button 
+          type="button"
+          aria-label="Chat" 
+          onPress={(e) => {
+            setShowForm(true);
+          }}
+        >
+          <FontAwesomeIcon icon={faMessage}/>
+        </Button>
+      }
+    </div>
+  );
+}
+
 function Chats() {
   const [chats, setChats] = React.useState<ChatMessage[]>([]);
   const engine = useClientEngine();
   const ref = React.useRef<HTMLDivElement>(null);
-  const [showForm, setShowForm] = React.useState(false);
 
   React.useEffect(() => {
     const listener = (msg: ChatMessage) => {
@@ -652,55 +731,54 @@ function Chats() {
     };
   }, [setChats, engine]);
 
-  React.useEffect(() => {
-    const listener = (event: KeyboardEvent) => {
-      if (event.key === "t") {
-        event.preventDefault();
-        event.stopPropagation();
-        setShowForm(true);
-      }
-    };
-    document.addEventListener("keypress", listener);
-    return () => {
-      document.removeEventListener("keypress", listener);
-    };
-  }, []);
+  return (
+    <div className={sty.chats} ref={ref}>
+      {chats.map((chat) => <ChatMessage key={`${chat.playerId}-${chat.time}`} chat={chat} />)}
+    </div>
+  );
+}
 
-  const getChatAuthor = (msg: ChatMessage) => {
-    const lander = engine.game.landers.find(l => l.id === msg.playerId);
-    return lander;
-  };
+function ChatMessage(props: {
+  chat: ChatMessage;
+}) {
+  const { chat } = props;
+  const engine = useClientEngine();
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const bgRef = React.useRef<HTMLDivElement>(null);
+  const lander = engine.game.landers.find(l => l.id === chat.playerId);
+
+  const color = lander ? getLanderColor(lander.color, 5) : grayDark.gray5;
+  React.useEffect(() => {
+    if (bgRef.current) {
+      bgRef.current.animate([
+        { backgroundColor: color, opacity: 0.5},
+        { backgroundColor: yellowDark.yellow10, opacity: 0.8 },
+        {  backgroundColor: color, opacity: 0.5},
+      ], {duration: 900, iterations: 1})
+    }
+    if (rootRef.current) {
+      rootRef.current.animate([
+        {opacity: 0, marginBottom: "20px"},
+        {opacity: 1, marginBottom: "0px"}
+      ], {duration: 200, iterations: 1})
+    }
+  }, [bgRef, rootRef, color]);
 
   return (
-    <>
-      <div className={sty.topRightRow}>
-        <DialogTrigger isOpen={showForm} onOpenChange={(open) => setShowForm(open)}>
-          <Button aria-label="Chat"><FontAwesomeIcon icon={faMessage}/></Button>
-          <ChatDialog 
-            onSend={opts => {
-              engine.sendChat(opts);
-            }}
-          />
-        </DialogTrigger>
-      </div>
-      <div className={sty.topRightRow}>
-        <div className={sty.chats} ref={ref}>
-          {chats.map((chat, i) => {
-            const lander = getChatAuthor(chat);
-            return (
-              <div 
-                className={sty.chatMessage}
-              >
-                <div className={sty.chatMessageBg} style={{backgroundColor: lander ? getLanderColor(lander.color, 5) : grayDark.gray5}} />
-                <span className={sty.chatMessageAuthor}>
-                  {lander?.name ?? "(unknown)"}:
-                </span> {chat.message}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-    </>
-  )
+    <div 
+      className={sty.chatMessage}
+      ref={rootRef}
+    >
+      <div 
+        className={sty.chatMessageBg} 
+        ref={bgRef}
+        style={{
+          backgroundColor: color
+        }} 
+      />
+      <span className={sty.chatMessageAuthor}>
+        {lander?.name ?? "(unknown)"}:
+      </span> {chat.message}
+    </div>
+  );
 }

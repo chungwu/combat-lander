@@ -7,6 +7,7 @@ import sty from "./TextField.module.css";
 interface TextFieldProps extends React.ComponentProps<typeof BaseTextField> {
   label?: string;
   autoSelectAll?: boolean;
+  placeholder?: string;
 }
 
 export function TextField(props: TextFieldProps) {
