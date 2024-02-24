@@ -728,7 +728,7 @@ function Chats() {
     const id = setInterval(() => {
       setChats(chats => {
         // Keep messages for 10 seconds
-        const filtered = chats.filter(c  => c.time > (engine.timestep - 1000 * 60));
+        const filtered = chats.filter(c  => c.time > (engine.timestep - 10 * 60));
         if (filtered.length !== chats.length) {
           return filtered;
         } else {
