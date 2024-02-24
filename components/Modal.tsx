@@ -9,38 +9,67 @@ export function Modal(props: {
   underlayBlur?: boolean;
   modalBlur?: boolean;
   isOpen?: boolean;
-  modalType?: "dialog" | "alertdialog";
   onOpenChange?: (open: boolean) => void;
 }) {
-  const { children, underlayBlur, modalBlur, isOpen, modalType, onOpenChange, ...rest } = props;
+  const { children, underlayBlur, modalBlur, isOpen, onOpenChange, ...rest } = props;
   return (
     <ModalOverlay
-      className={classNames("app", "dark", MONO.variable, sty.underlay, {
-        [sty.modalAlert]: modalType === "alertdialog"
-      })}
+      className={classNames("app", "dark", MONO.variable, sty.underlay)}
       isOpen={isOpen}
       style={{
         backdropFilter: underlayBlur ? "blur(8px)" : undefined,
       }}
-      isDismissable={modalType === "alertdialog" ? false : true}
+      isDismissable={true}
       onOpenChange={onOpenChange}
     >
-      <div
-        onKeyDown={e => e.stopPropagation()}
-        onKeyUp={e => e.stopPropagation()}
-        onKeyPress={e => e.stopPropagation()}
+      <BaseModal
+        className={sty.modal}
+        style={{
+          backdropFilter: modalBlur ? "blur(8px)" : undefined,
+        }}
       >
-        <BaseModal
-          className={sty.modal}
-          style={{
-            backdropFilter: modalBlur ? "blur(8px)" : undefined,
-          }}
+        <div
+          onKeyDown={e => e.stopPropagation()}
+          onKeyUp={e => e.stopPropagation()}
+          onKeyPress={e => e.stopPropagation()}
         >
-          <Dialog className={sty.dialog} role={modalType}>
+          <Dialog className={sty.dialog}>
             {children}
           </Dialog>
-        </BaseModal>
-      </div>
+        </div>
+      </BaseModal>
+    </ModalOverlay>
+  )
+}
+
+/**
+ * Works like Modal but doesn't lock focus; allows interaction
+ * behind the alert
+ */
+export function Alert(props: {
+  children?: React.ReactNode;
+  underlayBlur?: boolean;
+  modalBlur?: boolean;
+  isOpen?: boolean;
+}) {
+  const { children, underlayBlur, modalBlur, isOpen, ...rest } = props;
+  return (
+    <ModalOverlay
+      className={classNames("app", "dark", MONO.variable, sty.underlay, sty.modalAlert)}
+      isOpen={isOpen}
+      style={{
+        backdropFilter: underlayBlur ? "blur(1px)" : undefined,
+      }}
+      isDismissable={false}
+    >
+      <BaseModal
+        className={sty.modal}
+        style={{
+          backdropFilter: modalBlur ? "blur(8px)" : undefined,
+        }}
+      >
+        {children}
+      </BaseModal>
     </ModalOverlay>
   )
 }

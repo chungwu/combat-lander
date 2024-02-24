@@ -16,7 +16,7 @@ import { Joystick, JoystickShape } from "react-joystick-component";
 import { Button } from "./Button";
 import sty from "./GameOverlay.module.css";
 import { Menu, MenuItem, MenuSeparator, Popover } from "./Menu";
-import { Modal } from "./Modal";
+import { Alert, Modal } from "./Modal";
 import { ChatDialog, InviteGameDialog, JoinGameDialog, PlayerInfoDialog, ResetGameDialog, StartGameDialog } from "./dialogs";
 import { useClientEngine } from "./contexts";
 import { ChatMessage } from "@/messages";
@@ -174,7 +174,7 @@ const MajorGameMessage = observer(function MajorGameMessage(props: {
   if (game.wonPlayer) {
     const lander = game.landers.find(l => l.id === game.wonPlayer?.playerId);
     return (
-      <Modal modalBlur isOpen modalType="alertdialog">
+      <Alert modalBlur isOpen>
         <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 24}}>
           <Heading slot="title">
             {game.wonPlayer.reason === "last-lander" ? `${lander?.name} is last lander standing!` : `${lander?.name} has landed!`}
@@ -185,11 +185,11 @@ const MajorGameMessage = observer(function MajorGameMessage(props: {
             </div>
           )}
         </div>
-      </Modal>
+      </Alert>
     );
   } else if (engine.resetPending && engine.resetPending.cause !== "won") {
     return (
-      <Modal modalBlur isOpen modalType="alertdialog">
+      <Alert modalBlur isOpen>
         <div style={{display: "flex", flexDirection: "column", alignItems: "center", gap: 24}}>
           {engine.resetPending.cause === "dead" ? (
             <>
@@ -211,7 +211,7 @@ const MajorGameMessage = observer(function MajorGameMessage(props: {
             </>
           )}
         </div>
-      </Modal>
+      </Alert>
     );
   }
   return null;
