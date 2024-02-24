@@ -16,6 +16,8 @@
 
 .modalAlert {
   z-index: var(--z-alert);
+  align-items: center;
+  padding: 0;
 }
 
 .dialog {
