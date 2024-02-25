@@ -64,6 +64,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   handleMessage(msg: ServerMessage) {
+    const start = performance.now();
     runInAction(() => {
       if (msg.gameId !== this.game.id && msg.type !== "reset") {
         return;
@@ -124,6 +125,8 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.chatListeners.forEach(l => l(msg));
       }
     });
+    const end = performance.now();
+    console.log(`[${this.timestep}] HANDLED MESSAGE ${msg.type} @ ${msg.time} in ${end - start}`, msg);
   }
 
   protected reset() {
