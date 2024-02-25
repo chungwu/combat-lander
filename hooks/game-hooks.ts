@@ -1,5 +1,6 @@
 import { PARTYKIT_HOST } from "@/env";
 import { ClientLanderEngine } from "@/game/client-engine";
+import { STEPS_PER_SECOND } from "@/game/constants";
 import { KeyboardController } from "@/game/controls";
 import { LanderGameState } from "@/game/game-state";
 import { PACKR } from "@/game/packr";
@@ -35,7 +36,7 @@ export function useLanderSocket(roomId: string) {
       engine.controller.install();
       const id = setInterval(() => {
         engine.timerStep(); 
-      }, 1000/60);
+      }, 1000/STEPS_PER_SECOND);
       return () => {
         engine.controller.uninstall();
         clearInterval(id);

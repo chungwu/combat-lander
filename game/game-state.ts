@@ -5,7 +5,7 @@ import { EventQueue, Vector2, World } from "@dimforge/rapier2d";
 import assert from "assert";
 import pull from "lodash/pull";
 import { makeObservable, observable } from "mobx";
-import { CONTACT_DAMAGE_FACTOR, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, ROCKET_STATS } from "./constants";
+import { CONTACT_DAMAGE_FACTOR, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, ROCKET_STATS, STEPS_PER_SECOND } from "./constants";
 import { Moon, generateRandomMap } from "./map";
 import { Ground } from "./objects/ground";
 import { Lander } from "./objects/lander";
@@ -46,6 +46,7 @@ export class LanderGameState {
   }) {
     const moon = opts.moon ?? generateRandomMap();
     const world = new World(new Vector2(0, moon.gravity));
+    world.timestep = 1 / STEPS_PER_SECOND;
     world.numSolverIterations = 1;
     const game = new LanderGameState(
       nanoid(), 

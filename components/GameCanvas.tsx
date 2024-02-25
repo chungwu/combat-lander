@@ -2,6 +2,7 @@ import React from "react";
 import { LanderGameState } from "@/game/game-state";
 import type CanvasRenderer from "@/game/canvas-renderer";
 import { useClientEngine } from "./contexts";
+import { STEPS_PER_SECOND } from "@/game/constants";
 
 export function GameCanvas(props: {
   game: LanderGameState;
@@ -42,7 +43,7 @@ export function GameCanvas(props: {
         if (!(globalThis as any).PAUSE_RENDER) {
           renderer.render(game, playerId, engine.timestep);
         }
-      }, 1000/60);
+      }, 1000/STEPS_PER_SECOND);
       return () => clearInterval(id)
     }
   }, [renderer, game])

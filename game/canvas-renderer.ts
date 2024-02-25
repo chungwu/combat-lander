@@ -6,7 +6,7 @@ import { grayDark, greenDark, tomatoDark, yellowDark } from "@radix-ui/colors";
 import assert from "assert";
 import { Viewport } from "pixi-viewport";
 import { Container, DisplayObject, Graphics, Renderer, Text } from "pixi.js";
-import { LANDER_TRAIL_LENGTH, LANDER_TRAIL_LIFE, LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, WORLD_WIDTH, getLanderColor } from "./constants";
+import { LANDER_TRAIL_LENGTH, LANDER_TRAIL_LIFE, LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, STEPS_PER_SECOND, WORLD_WIDTH, getLanderColor } from "./constants";
 import { LanderGameState } from "./game-state";
 import { GameObject } from "./objects/game-object";
 import { Ground } from "./objects/ground";
@@ -366,7 +366,7 @@ export class CanvasRenderer {
   }
 
   private updateLanderTrails(game: LanderGameState, lander: Lander, time: number) {
-    const stepsPerDot = LANDER_TRAIL_LIFE / LANDER_TRAIL_LENGTH * 60;
+    const stepsPerDot = LANDER_TRAIL_LIFE / LANDER_TRAIL_LENGTH * STEPS_PER_SECOND;
     if (time % stepsPerDot === 0) {
       let trails = this.id2trails.get(lander.id);
       if (!trails) {

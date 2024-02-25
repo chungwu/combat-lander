@@ -1,6 +1,7 @@
 import { GameInputEvent, PlayerInputMessage } from "@/messages";
 import assert from "assert";
 import { LanderGameState } from "./game-state";
+import { STEPS_PER_SECOND } from "./constants";
 
 export class BaseLanderEngine {
   protected initialTimeStep = 0;
@@ -181,4 +182,4 @@ function trimByTime(timed: {time: number}[], removeOlderThanTime: number) {
   }
 }
 
-const STEP_INTERVAL_MS = 1000 / 60; // 60 steps per 1 second
+const STEP_INTERVAL_MS = 1000 / STEPS_PER_SECOND;

@@ -5,7 +5,7 @@ import { BaseLanderEngine } from "./engine";
 import { GameOptions, LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
 import { PACKR } from "./packr";
-import { LANDER_COLORS, LANDING_PAD_STATS, LanderColor, PARTIAL_SYNC_FREQ, RESET_GAME_WAIT, SERVER_SNAPSHOT_FREQ, SERVER_SNAPSHOT_GC_FREQ, WON_GAME_WAIT as END_GAME_WAIT } from "./constants";
+import { LANDER_COLORS, LANDING_PAD_STATS, LanderColor, PARTIAL_SYNC_FREQ, RESET_GAME_WAIT, SERVER_SNAPSHOT_FREQ, SERVER_SNAPSHOT_GC_FREQ, WON_GAME_WAIT as END_GAME_WAIT, STEPS_PER_SECOND } from "./constants";
 import random from "lodash/random";
 import pull from "lodash/pull";
 import { sortBy } from "lodash";
@@ -324,7 +324,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
     if (this.intervalId == null && this.viewerIds.length > 0) {
       this.intervalId = setInterval(() => {
         this.timerStep();
-      }, 1000 / 60);
+      }, 1000 / STEPS_PER_SECOND);
     }
   }
 

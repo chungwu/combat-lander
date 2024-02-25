@@ -2,6 +2,7 @@ import { degreesToRadians } from "@/utils/math";
 import { amberDark, blueDark, bronzeDark, crimsonDark, cyanDark, grassDark, greenDark, indigoDark, irisDark, jadeDark, limeDark, mintDark, orangeDark, pinkDark, plumDark, purpleDark, rubyDark, skyDark, tealDark, violetDark, yellowDark } from "@radix-ui/colors"
 
 // Game mechanics
+export const STEPS_PER_SECOND = 30;
 export const RESET_GAME_WAIT = 5 // 5 seconds 
 export const WON_GAME_WAIT = 5 // 10 seconds 
 
@@ -41,18 +42,16 @@ export const LANDING_SAFE_VY = 20;
 export const ROCKET_STATS = {
   "small": {
     radius: 10,
-    initialVelocity: 40,
-    aliveSteps: 60 * 15, // alive for 15s,
+    aliveSteps: STEPS_PER_SECOND * 15, // alive for 15s,
     ammo: 5,
-    replenishSteps: 60 * 3, // 3 seconds to replenish a rocket
+    replenishSteps: STEPS_PER_SECOND * 3, // 3 seconds to replenish a rocket
     impulse: 15000,
   },
   "big": {
     radius: 25,
-    initialVelocity: 40,
-    aliveSteps: 60 * 15,
+    aliveSteps: STEPS_PER_SECOND * 15,
     ammo: 1,
-    replenishSteps: 60 * 10,
+    replenishSteps: STEPS_PER_SECOND * 10,
     impulse: 50000,
   } as const
 };
@@ -100,11 +99,11 @@ export function getLanderColor(color: LanderColor, level: 1|2|3|4|5|6|7|8|9|10|1
 }
 
 // Sync mechanics
-export const PARTIAL_SYNC_FREQ = 60 * 5; // once every 5 seconds
-export const SERVER_SNAPSHOT_GC_FREQ = 60 * 10; // every 10 seconds
+export const PARTIAL_SYNC_FREQ = STEPS_PER_SECOND * 5; // once every 5 seconds
+export const SERVER_SNAPSHOT_GC_FREQ = STEPS_PER_SECOND * 10; // every 10 seconds
 export const SERVER_SNAPSHOT_FREQ = 1; // save every snapshot
 
-export const CLIENT_SNAPSHOT_GC_FREQ = 60 * 1; // gc every second
+export const CLIENT_SNAPSHOT_GC_FREQ = STEPS_PER_SECOND * 1; // gc every second
 export const CLIENT_SNAPSHOT_FREQ = 1; // save every snapshot
 
 export const JOYSTICK_THRESHOLD = 0.1;

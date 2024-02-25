@@ -1,4 +1,4 @@
-import { ROCKET_STATS, RocketType, getLanderColor } from "@/game/constants";
+import { ROCKET_STATS, RocketType, STEPS_PER_SECOND, getLanderColor } from "@/game/constants";
 import { PseudoKeyboardEvent, getControlScheme } from "@/game/controls";
 import { Lander } from "@/game/objects/lander";
 import { blurActive, isFullScreenMode } from "@/utils/dom-utils";
@@ -733,7 +733,7 @@ function Chats() {
     const id = setInterval(() => {
       setChats(chats => {
         // Keep messages for 10 seconds
-        const filtered = chats.filter(c  => c.time > (engine.timestep - 10 * 60));
+        const filtered = chats.filter(c  => c.time > (engine.timestep - 10 * STEPS_PER_SECOND));
         if (filtered.length !== chats.length) {
           return filtered;
         } else {
