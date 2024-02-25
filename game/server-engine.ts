@@ -1,4 +1,4 @@
-import { ClientMessage, GameInputEvent, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
+import { ClientMessage, GameInputEvent, PlayerInputMessage, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
 import { Vector2 } from "@dimforge/rapier2d";
 import { Connection, Room } from "partykit/server";
 import { BaseLanderEngine } from "./engine";
@@ -8,6 +8,7 @@ import { PACKR } from "./packr";
 import { LANDER_COLORS, LANDING_PAD_STATS, LanderColor, PARTIAL_SYNC_FREQ, RESET_GAME_WAIT, SERVER_SNAPSHOT_FREQ, SERVER_SNAPSHOT_GC_FREQ, WON_GAME_WAIT as END_GAME_WAIT } from "./constants";
 import random from "lodash/random";
 import pull from "lodash/pull";
+import { sortBy } from "lodash";
 
 export class ServerLanderEngine extends BaseLanderEngine {
   private shouldImmediatelyBroadcastSync = false;
@@ -15,6 +16,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
   private intervalId: any | undefined;
   private lastSyncTimestep: number = 0;
   private resetTimestamp: number | undefined = undefined;
+  private inputQueue: PlayerInputMessage[] = [];
 
   constructor(private room: Room) {
     const game = LanderGameState.createNew({
@@ -57,21 +59,10 @@ export class ServerLanderEngine extends BaseLanderEngine {
         id: sender.id,
         name: msg.name
       });
+      this.send(sender, this.makeResetMessage());
       this.broadcast(this.makePartialMessage());
     } else if (msg.type === "input") {
-      this.savePlayerEvent(msg);
-      
-      if (msg.time < this.timestep) {
-        this.restoreApplyReplay(
-          msg.time,
-          () => 0
-        );
-      }
-      if (this.shouldImmediatelyBroadcastSync) {
-        console.log(`[${this.timestep}] Immediate broadcast`);
-        this.broadcast(this.makePartialMessage())
-        this.shouldImmediatelyBroadcastSync = false;
-      }
+      this.inputQueue.push(msg);
       this.broadcast(msg);
     } else if (msg.type === "request-start") {
       this.addPlayer({
@@ -79,7 +70,6 @@ export class ServerLanderEngine extends BaseLanderEngine {
         name: msg.name
       });
       this.resetGame(msg.options, {preserveMap: true, preserveScores: false});
-      this.broadcast(this.makeFullMessage());
     } else if (msg.type === "request-reset") {
       // Reset in 10 seconds
       const waitTime = 1000 * RESET_GAME_WAIT;
@@ -98,8 +88,6 @@ export class ServerLanderEngine extends BaseLanderEngine {
         time: this.timestep,
         gameId: this.game.id,
       });
-    } else if (msg.type === "request-full") {
-      this.send(sender, this.makeFullMessage());
     } else if (msg.type === "player-info") {
       const lander = this.game.landers.find(l => l.id === sender.id);
       if (lander) {
@@ -153,12 +141,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
       }
     }
     this.reset();
-    this.broadcast({
-      type: "reset",
-      paylod: this.game.serializeFull(),
-      gameId: this.game.id,
-      time: this.timestep
-    });
+    this.broadcast(this.makeResetMessage());
   }
 
   onConnect(conn: Connection) {
@@ -178,6 +161,8 @@ export class ServerLanderEngine extends BaseLanderEngine {
 
   timerStep() {
     this.shouldImmediatelyBroadcastSync = false;
+
+    this.processInputQueue();
 
     super.timerStep();
 
@@ -235,6 +220,9 @@ export class ServerLanderEngine extends BaseLanderEngine {
 
     // Send partial state update every second
     if (this.timestep % PARTIAL_SYNC_FREQ === 0 || this.shouldImmediatelyBroadcastSync) {
+      if (this.shouldImmediatelyBroadcastSync) {
+        console.log(`[${this.timestep}] Immediate broadcast`);
+      }
       this.broadcast(this.makePartialMessage());
     }
 
@@ -255,8 +243,23 @@ export class ServerLanderEngine extends BaseLanderEngine {
 
   private broadcast(msg: ServerMessage) {
     this.room.broadcast(PACKR.pack(msg));
-    if (msg.type === "partial" || msg.type === "full") {
+    if (msg.type === "partial") {
       this.lastSyncTimestep = this.timestep;
+    }
+  }
+
+  private processInputQueue() {
+    const msgs = sortBy(this.inputQueue, m => m.time);
+    this.inputQueue.splice(0, this.inputQueue.length);
+
+    for (const msg of msgs) {
+      this.savePlayerEvent(msg);
+    }
+
+    // Apply the player events we've observed
+    const fromTime = msgs[0]?.time;
+    if (fromTime != null) {
+      this.restoreApplyReplay(fromTime, () => 0);
     }
   }
 
@@ -285,21 +288,21 @@ export class ServerLanderEngine extends BaseLanderEngine {
     } as const;
   }
 
-  private makeFullMessage() {
-    return {
-      type: "full",
-      time: this.timestep,
-      gameId: this.game.id,
-      payload: this.game.serializeFull()
-    } as const;
-  }
-
   private makeMetaMessage() {
     return {
       type: "meta",
       time: this.timestep,
       gameId: this.game.id,
       payload: this.game.serializeMeta()
+    } as const;
+  }
+
+  private makeResetMessage() {
+    return {
+      type: "reset",
+      paylod: this.game.serializeFull(),
+      gameId: this.game.id,
+      time: this.timestep
     } as const;
   }
 

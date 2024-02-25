@@ -63,17 +63,11 @@ export type ClientMessage =
   | RequestResetGameMessage 
   | CancelResetGameMessage 
   | RequestStartGameMessage 
-  | RequestFullSyncMessage 
   | PlayerInfoMessage 
   | ChatMessage;
 
 export interface InitMessage extends Message {
   type: "init";
-  payload: FullSerializedGameState;
-}
-
-export interface FullSyncMessage extends Message {
-  type: "full";
   payload: FullSerializedGameState;
 }
 
@@ -105,7 +99,6 @@ export interface ResetGameMessage extends Message {
 
 export type ServerMessage = 
   | InitMessage
-  | FullSyncMessage
   | MetaSyncMessage
   | PartialSyncMessage
   | ResetGameMessage

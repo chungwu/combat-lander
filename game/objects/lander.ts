@@ -131,7 +131,6 @@ export class Lander extends GameObject {
           this.rotatingRight = event.active;
         }
       } else if (event.type === "joystick") {
-        console.log("JOYSTICK", event);
         if (event.rotatingLeft != null) {
           this.rotatingLeft = event.rotatingLeft;
         }

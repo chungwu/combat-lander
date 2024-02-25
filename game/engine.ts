@@ -168,7 +168,7 @@ export class BaseLanderEngine {
 }
 
 
-interface GameSnapshot {
+export interface GameSnapshot {
   time: number;
   snapshot: ReturnType<typeof LanderGameState.prototype.takeSnapshot>;
 }

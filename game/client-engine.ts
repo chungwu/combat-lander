@@ -1,18 +1,20 @@
-import { ChatMessage, ClientMessage, FullSyncMessage, GameInputEvent, PartialSyncMessage, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
+import { ChatMessage, ClientMessage, GameInputEvent, PartialSyncMessage, PlayerInputMessage, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
 import PartySocket from "partysocket";
 import { GameOptions, LanderGameState } from "./game-state";
-import { BaseLanderEngine } from "./engine";
+import { BaseLanderEngine, GameSnapshot } from "./engine";
 import assert from "assert";
 import { CLIENT_SNAPSHOT_FREQ, CLIENT_SNAPSHOT_GC_FREQ, PARTIAL_SYNC_FREQ } from "./constants";
 import { computed, makeObservable, observable, runInAction } from "mobx";
 import { KeyboardController } from "./controls";
 import pull from "lodash/pull";
+import { sortBy } from "lodash";
 
 export class ClientLanderEngine extends BaseLanderEngine {
   private lastSyncTimestep: number;
   public controller: KeyboardController;
   public resetPending: ResetPendingMessage | undefined;
   private chatListeners: ((msg: ChatMessage) => void)[] = [];
+  private messageQueue: (PartialSyncMessage | PlayerInputMessage)[] = [];
   constructor(
     state: LanderGameState,
     private socket: PartySocket,
@@ -64,49 +66,18 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   handleMessage(msg: ServerMessage) {
-    const start = performance.now();
     runInAction(() => {
       if (msg.gameId !== this.game.id && msg.type !== "reset") {
         return;
       }
       console.log(`[${this.timestep}] GOT MESSAGE ${msg.type} @ ${msg.time}`, msg);
-      if ((msg.type === "full" || msg.type === "partial") && !this.game.wonPlayer) {
-        // msg.time should always be > this.lastSyncTimestep as we don't expect
-        // to receive sync messages out of order. It is, however, possible to 
-        // receive the sync twice for the same time step, if there are two player
-        // inputs that fall on the same time step that the server needs to 
-        // immediately broadcast.
-        assert(msg.time >= this.lastSyncTimestep, `[${this.timestep}] Got sync messages out of order? msg.time=${msg.time} but last sync was ${this.lastSyncTimestep}`);
-  
-        if (msg.type === "partial" && (this.timestep - msg.time) > PARTIAL_SYNC_FREQ * 2) {
-          // Got a sync message from a long time ago, so that means
-          // we are running pretty behind. Ignore this one so because
-          // there's probably another one in the queue!
-          console.log(`[${this.timestep}] Ignoring partial sync from ${msg.time}`);
-          return;
-        }
-        if (msg.time > this.timestep) {
-          // Message is from the future! Catch up to it
-          this.replayTo(msg.time);
-        }
-        this.applySyncMessage(msg);
+      if (msg.type === "partial" && !this.game.wonPlayer) {
+        this.messageQueue.push(msg);
       } else if (msg.type === "input") {
+        // We can ignore player events from ourselves, as we've already applied
+        // those locally.  
         if (msg.playerId !== this.playerId) {
-          // We can ignore player events from ourselves, as we've already applied
-          // those locally.  
-          if (msg.time > this.lastSyncTimestep) {
-            // We can also ignore input events from before the last
-            // sync time step, because the last sync time step had already incorporated
-            // the effect of this event.
-            this.savePlayerEvent(msg);
-            this.restoreApplyReplay(
-              msg.time,
-              // Don't need to do anything; input will be applied
-              () => 0
-            );
-          } else {
-            console.log(`[${this.timestep}] skipping obsolete input event...`)
-          }
+          this.messageQueue.push(msg);
         }
       } else if (msg.type === "init") {
         // handled before engine creation
@@ -125,8 +96,6 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.chatListeners.forEach(l => l(msg));
       }
     });
-    const end = performance.now();
-    console.log(`[${this.timestep}] HANDLED MESSAGE ${msg.type} @ ${msg.time} in ${end - start}`, msg);
   }
 
   protected reset() {
@@ -134,76 +103,10 @@ export class ClientLanderEngine extends BaseLanderEngine {
     this.controller.reset();
   }
 
-  private applySyncMessage(msg: FullSyncMessage | PartialSyncMessage) {
-    if (msg.type === "full") {
-      // For a full sync, we make it part of our snapshots history, and
-      // then play forward from there. This avoids the case where we don't
-      // have an existing snapshot with that time step, and so we'd fail
-      // to restoreApplyReplay().
-      this.insertSnapshot({
-        time: msg.time,
-        snapshot: {
-          ...msg.payload,
-          world: msg.payload.world.takeSnapshot()
-        }
-      });
-      // We restore and reply, but don't need to do a merge anymore, as we
-      // started from the snapshot we just created. But we forceRestore, so we
-      // make sure the snapshot we just inserted will be used, even if it's the
-      // same time as now.
-      this.restoreApplyReplay(
-        msg.time, 
-        // Even though restore would restore this snapshot, we explicitly want
-        // to do a full merge, not a partial merge, for these full sync messages
-        () => this.game.mergeFull(msg.payload)
-      );
-      this.lastSyncTimestep = msg.time;
-    } else {
-      const lastServerKnownTimesteps = msg.lastPlayerInputTimesteps[this.playerId] ?? [];
-      const oldestLastServerKnownTimestep = lastServerKnownTimesteps[0] ?? 0;
-      const unseenInputs = this.playerInputs.filter(x => x.playerId === this.playerId && x.time >= oldestLastServerKnownTimestep && x.time <= msg.time && !lastServerKnownTimesteps.includes(x.time));
-      if (unseenInputs.length > 0 && this.selfLander) {
-        // Suppose this sync message reflects the server's state at time 100.
-        // But we see that the server last saw an input from us at time 90, and that
-        // we have another input at time 95 that the server has not seen yet (due to
-        // network issues, etc). In that case, the server's idea of our location will
-        // differ from our own, and if we apply this sync, it will be very jarring.
-        // So instead, we will wait until we see a server's sync message that incorporates
-        // all known inputs from us.
-        //
-        // This is kind of dangerous as we may end up lagging significantly behind the
-        // server, if the server is consistently behind in processing our inputs. But the
-        // alternative is to have jarring effects where our lander would jump and and forth.
-        //
-        // Note also that we are only checking for ourself, not other players. This just
-        // makes it easier for this check to pass; it means other players may still "jump"
-        // and we ourselves may also still "jump" if we are in contact with other players.
-        // But, there's not much we can do there, as we also can't trust that we ourselves
-        // have an accurate view of the inputs from other players.
-        console.log(`[${this.timestep}] STALE partial sync! Server at ${msg.time} only saw [${lastServerKnownTimesteps.join(", ")}] since last sync, but we have [${unseenInputs.map(x => x.time).join(", ")}]`);
-      } else {
-        const success = this.restoreApplyReplay(
-          msg.time,
-          () => {
-            this.game.mergePartial(msg.payload);
-          }
-        );
-        if (!success) {
-          // If we failed to apply a partial update, because we don't have a
-          // snapshot that's old enough, then request a full update
-          this.sendMessage({
-            type: "request-full",
-            time: this.timestep,
-            gameId: this.game.id
-          });
-        }
-        this.lastSyncTimestep = msg.time;
-      }
-    }
-  }
-
   timerStep() {
     runInAction(() => {
+      this.processMessageQueue();
+
       // If there are player inputs from the future, apply them now
       // before we step
       this.applyPlayerInputsAt(m => m.time === this.timestep && m.playerId !== this.playerId);
@@ -215,6 +118,80 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.garbageCollect(this.lastSyncTimestep);
       }
     });
+  }
+
+  private processMessageQueue() {
+    const curTime = this.timestep;
+    const messages = sortBy(this.messageQueue, m => m.time);
+
+    // Clear the message queue
+    this.messageQueue.splice(0, messages.length);
+
+    // first, look for a sync message that we can apply; it will have to
+    // be one that we don't outright know is wrong.
+
+    const lastSyncMsg = messages.findLast((m): m is PartialSyncMessage => m.type === "partial");
+    if (lastSyncMsg) {
+      // We only care about the last sync message, as a previous sync message would
+      // be superceded by this one anyway
+
+      // Suppose this sync message reflects the server's state at time 100.
+      // But we see that the server last saw an input from us at time 90, and that
+      // we have another input at time 95 that the server has not seen yet (due to
+      // network issues, etc). In that case, the server's idea of our location will
+      // differ from our own, and if we apply this sync, it will be very jarring.
+      // So instead, we will wait until we see a server's sync message that incorporates
+      // all known inputs from us.
+      //
+      // This is kind of dangerous as we may end up lagging significantly behind the
+      // server, if the server is consistently behind in processing our inputs. But the
+      // alternative is to have jarring effects where our lander would jump and and forth.
+      //
+      // Note also that we are only checking for ourself, not other players. This just
+      // makes it easier for this check to pass; it means other players may still "jump"
+      // and we ourselves may also still "jump" if we are in contact with other players.
+      // But, there's not much we can do there, as we also can't trust that we ourselves
+      // have an accurate view of the inputs from other players.
+      const lastServerKnownTimesteps = lastSyncMsg.lastPlayerInputTimesteps[this.playerId] ?? [];
+      const oldestLastServerKnownTimestep = lastServerKnownTimesteps[0] ?? 0;
+      const unseenInputs = this.playerInputs.filter(x => x.playerId === this.playerId && x.time >= oldestLastServerKnownTimestep && x.time <= lastSyncMsg.time && !lastServerKnownTimesteps.includes(x.time));
+      if (unseenInputs.length > 0) {
+        console.log(`[${this.timestep}] STALE partial sync! Server at ${lastSyncMsg.time} only saw [${lastServerKnownTimesteps.join(", ")}] since last sync, but we have [${unseenInputs.map(x => x.time).join(", ")}]`);
+      } else {
+        console.log(`[${this.timestep}] Applying sync from ${lastSyncMsg.time}`);
+        assert(lastSyncMsg.time >= this.lastSyncTimestep, `[${this.timestep}] Got sync messages out of order? lastSyncMsg.time=${lastSyncMsg.time} but last sync was ${this.lastSyncTimestep}`);
+        // Restore to that snapshot
+        this.restoreSnapshot({
+          time: lastSyncMsg.time,
+          snapshot: {
+            ...lastSyncMsg.payload,
+            world: lastSyncMsg.payload.world.takeSnapshot()
+          }
+        });
+        this.lastSyncTimestep = lastSyncMsg.time;
+      }
+    }
+
+    const playerInputs = messages.filter((m): m is PlayerInputMessage => m.type === "input");
+
+    // Save all the player inputs
+    for (const msg of playerInputs) {
+      this.savePlayerEvent(msg);
+    }
+
+    // Now replay player inputs and bring us back to current time. What time should we start from?
+    // We should start from the playerInput message with the minimum time...  but we can also
+    // ignore events from before lastSyncMsg.time, because those inputs should've been
+    // already incorporated into the lastSyncMsg
+    const fromTime = playerInputs[0]?.time ?? lastSyncMsg?.time;
+    if (fromTime != null && playerInputs.some(x => x.time >= fromTime)) {
+      this.restoreSnapshotTo(fromTime);
+    }
+    
+    // Now, we just have to replay to the current time, which will also apply the player
+    // inputs along the way. One wrinkle is that the lastSyncMsg.time may be in the future!
+    // In that case, we will also go ahead and catch up to the future.
+    this.replayTo(Math.max(curTime, lastSyncMsg?.time ?? 0));
   }
 
   protected postStepOne(): void {
