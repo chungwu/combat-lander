@@ -637,7 +637,12 @@ function ChatButton() {
   }, []);
 
   return (
-    <div className={sty.topRightRow}>
+    <div 
+      className={sty.topRightRow}
+      onKeyDown={e => e.stopPropagation()}
+      onKeyUp={e => e.stopPropagation()}
+      onKeyPress={e => e.stopPropagation()}
+    >
       {showForm && (
         <Form
           ref={formRef}

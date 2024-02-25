@@ -182,9 +182,9 @@ export class ClientLanderEngine extends BaseLanderEngine {
 
     // Now replay player inputs and bring us back to current time. What time should we start from?
     // We should start from the playerInput message with the minimum time...  but we can also
-    // ignore events from before lastSyncMsg.time, because those inputs should've been
-    // already incorporated into the lastSyncMsg
-    const fromTime = playerInputs[0]?.time ?? lastSyncMsg?.time;
+    // ignore events from before lastSyncTimestep, because those inputs should've been
+    // already incorporated when we applied the last sync.
+    const fromTime = Math.max(this.lastSyncTimestep, playerInputs[0]?.time ?? 0);
     if (fromTime != null && playerInputs.some(x => x.time >= fromTime)) {
       this.restoreSnapshotTo(fromTime);
     }
