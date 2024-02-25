@@ -121,7 +121,9 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.garbageCollect(this.lastSyncTimestep);
       }
     });
-    console.log(`[${this.timestep}] TIMESTEP ${performance.now() - start}ms\n=====`);
+    if ((globalThis as any).LOG_STEP_TIMES) {
+      console.log(`[${this.timestep}] TIMESTEP ${performance.now() - start}ms\n=====`);
+    }
   }
 
   private processMessageQueue() {
