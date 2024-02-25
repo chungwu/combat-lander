@@ -7,7 +7,8 @@ import pick from "lodash/pick";
 import { GameInputEvent } from "@/messages";
 import assert from "assert";
 import { makeObservable, observable } from "mobx";
-import cloneDeep from "lodash/cloneDeep";
+// @ts-ignore
+import {copy as cloneDeep} from "fastest-json-copy";
 
 interface LanderOpts {
   id: string;

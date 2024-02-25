@@ -16,6 +16,7 @@
     "@next/third-parties": "^14.1.0",
     "@radix-ui/colors": "^3.0.0",
     "classnames": "^2.5.1",
+    "fastest-json-copy": "^1.0.1",
     "lodash": "^4.17.21",
     "mobx": "^6.12.0",
     "mobx-react-lite": "^4.0.5",
