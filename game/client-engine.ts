@@ -162,7 +162,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
       const lastServerKnownTimesteps = msg.lastPlayerInputTimesteps[this.playerId] ?? [];
       const oldestLastServerKnownTimestep = lastServerKnownTimesteps[0] ?? 0;
       const unseenInputs = this.playerInputs.filter(x => x.playerId === this.playerId && x.time >= oldestLastServerKnownTimestep && x.time <= msg.time && !lastServerKnownTimesteps.includes(x.time));
-      if (unseenInputs.length > 0) {
+      if (unseenInputs.length > 0 && this.selfLander) {
         // Suppose this sync message reflects the server's state at time 100.
         // But we see that the server last saw an input from us at time 90, and that
         // we have another input at time 95 that the server has not seen yet (due to
