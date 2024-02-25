@@ -57,7 +57,8 @@ export class ServerLanderEngine extends BaseLanderEngine {
     if (msg.type === "join") {
       this.addPlayer({
         id: sender.id,
-        name: msg.name
+        name: msg.name,
+        color: msg.color,
       });
       this.send(sender, this.makeResetMessage());
       this.broadcast(this.makePartialMessage());
@@ -67,7 +68,8 @@ export class ServerLanderEngine extends BaseLanderEngine {
     } else if (msg.type === "request-start") {
       this.addPlayer({
         id: sender.id,
-        name: msg.name
+        name: msg.playerSettings.name,
+        color: msg.playerSettings.color
       });
       this.resetGame(msg.options, {preserveMap: true, preserveScores: false});
     } else if (msg.type === "request-reset") {
@@ -92,6 +94,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
       const lander = this.game.landers.find(l => l.id === sender.id);
       if (lander) {
         lander.name = msg.name;
+        lander.color = msg.color;
       }
       this.broadcast(this.makePartialMessage());
     } else if (msg.type === "chat") {

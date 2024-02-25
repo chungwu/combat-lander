@@ -1,4 +1,4 @@
-import { ROCKET_STATS, RocketType, STEPS_PER_SECOND, getLanderColor } from "@/game/constants";
+import { LANDER_COLORS, LanderColor, ROCKET_STATS, RocketType, STEPS_PER_SECOND, getLanderColor } from "@/game/constants";
 import { PseudoKeyboardEvent, getControlScheme } from "@/game/controls";
 import { Lander } from "@/game/objects/lander";
 import { blurActive, isFullScreenMode } from "@/utils/dom-utils";
@@ -17,11 +17,13 @@ import { Button } from "./Button";
 import sty from "./GameOverlay.module.css";
 import { Menu, MenuItem, MenuSeparator, Popover } from "./Menu";
 import { Alert, Modal } from "./Modal";
-import { ChatDialog, InviteGameDialog, JoinGameDialog, PlayerInfoDialog, ResetGameDialog, StartGameDialog } from "./dialogs";
+import { ChatDialog, InviteGameDialog, JoinGameDialog, PlayerInfoDialog, PlayerSettings, ResetGameDialog, StartGameDialog } from "./dialogs";
 import { useClientEngine } from "./contexts";
 import { ChatMessage } from "@/messages";
 import { gray, grayDark, yellowDark } from "@radix-ui/colors";
 import { TextField } from "./TextField";
+import { LanderGameState } from "@/game/game-state";
+import { random } from "lodash";
 
 export const GameOverlay = observer(function GameOverlay() {
   return (
@@ -39,16 +41,21 @@ const TopRight = observer(function TopRight(props: {}) {
   const engine = useClientEngine();
   const game = engine.game;
   const prevName = localStorage.getItem("playerName");
+  const prevColor = localStorage.getItem("playerColor");
   const { isFullScreen, toggleFullScreen } = useToggleFullScreen();
   const [ resetOpen, setResetOpen ] = React.useState(false);
   const [ playerSettingsOpen, setPlayerSettingsOpen ] = React.useState(false);
   const router = useRouter();
   const roomId = router.query.roomId as string;
 
-  const maybeSavePlayerName = (name: string) => {
-    if (!name.startsWith("Player ")) {
+  const maybeSavePlayerSettings = (opts: PlayerSettings) => {
+    if (!opts.name.startsWith("Player ")) {
       // Store a "real" name for future use
-      localStorage.setItem("playerName", name);
+      localStorage.setItem("playerName", opts.name);
+    }
+    
+    if (opts.color) {
+      localStorage.setItem("playerColor", opts.color);
     }
   };
 
@@ -71,10 +78,13 @@ const TopRight = observer(function TopRight(props: {}) {
                 Start game!
               </Button>
               <StartGameDialog
-                defaultName={prevName ?? `Player 1`}
+                curSettings={{
+                  name: prevName ?? `Player 1`,
+                  color: prevColor ? prevColor as LanderColor : pickAvailableColor(game),
+                }}
                 onStart={(opts) => {
-                  maybeSavePlayerName(opts.name);
-                  engine.startGame(opts.name, opts.options);
+                  maybeSavePlayerSettings(opts.settings);
+                  engine.startGame(opts.settings, opts.options);
                 }}
               />
             </DialogTrigger>
@@ -87,9 +97,12 @@ const TopRight = observer(function TopRight(props: {}) {
                 Join
               </Button>
               <JoinGameDialog 
-                defaultName={prevName ?? `Player ${game.landers.length + 1}`}
+                curSettings={{
+                  name: prevName ?? `Player ${game.landers.length + 1}`,
+                  color: prevColor ? prevColor as LanderColor : pickAvailableColor(game),
+                }}
                 onJoin={opts => {
-                  maybeSavePlayerName(opts.name);
+                  maybeSavePlayerSettings(opts);
                   engine.joinGame(opts);
                 }}
               />
@@ -153,11 +166,12 @@ const TopRight = observer(function TopRight(props: {}) {
       {playerSettingsOpen && (
         <PlayerInfoDialog
           curSettings={{
-            name: engine.selfLander?.name ?? localStorage.getItem("playerName") ?? "Player"
+            name: engine.selfLander?.name ?? localStorage.getItem("playerName") ?? "Player",
+            color: (engine.selfLander?.color ?? localStorage.getItem("playerColor") ?? pickAvailableColor(engine.game)) as LanderColor
           }}
           onSave={(opts) => {
-            maybeSavePlayerName(opts.name);
-            engine.setPlayerSettings({name: opts.name});
+            maybeSavePlayerSettings(opts);
+            engine.setPlayerSettings(opts);
           }}
           isOpen
           onClose={() => setPlayerSettingsOpen(false)}
@@ -166,6 +180,15 @@ const TopRight = observer(function TopRight(props: {}) {
     </>
   );
 });
+
+function pickAvailableColor(game: LanderGameState) {
+  const usedColors = game.landers.map(s => s.color);
+  let availableColors = LANDER_COLORS.filter(x => !usedColors.includes(x));
+  if (availableColors.length === 0) {
+    availableColors = LANDER_COLORS;
+  }
+  return availableColors[random(0, availableColors.length - 1)];
+}
 
 const MajorGameMessage = observer(function MajorGameMessage(props: {
 }) {

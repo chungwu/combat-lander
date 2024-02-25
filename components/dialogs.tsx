@@ -11,15 +11,16 @@ import { getControlScheme, setControlScheme } from "@/game/controls";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
 import React from "react";
+import { LANDER_COLORS, LANDER_COLORS_MAP, LanderColor, getLanderColor } from "@/game/constants";
 
 export function StartGameDialog(props: {
-  defaultName: string;
+  curSettings: PlayerSettings;
   onStart: (opts: {
-    name: string;
-    options: GameOptions
+    settings: PlayerSettings;
+    options: GameOptions;
   }) => void;
 }) {
-  const { onStart, defaultName } = props;
+  const { onStart, curSettings } = props;
   return (
     <Modal underlayBlur>
       {({close}) => (
@@ -29,7 +30,10 @@ export function StartGameDialog(props: {
             e.preventDefault();
             const data = new FormData(e.currentTarget);
             onStart({
-              name: data.get("name")?.toString() ?? defaultName,
+              settings: {
+                name: data.get("name")?.toString() as string,
+                color: data.get("color")?.toString() as LanderColor,
+              },
               options: extractGameOptions(data)
             });
             close();
@@ -37,13 +41,7 @@ export function StartGameDialog(props: {
         >
           <Heading slot="title">Start new game</Heading>
 
-          <TextField 
-            label="Your name"
-            name="name" 
-            defaultValue={defaultName}
-            autoFocus
-            autoSelectAll
-          />
+          <LanderSettingsFormPart curSettings={curSettings} />
 
           <GameOptionsForm />
           <div style={{display: "flex", gap: 24}}>
@@ -175,6 +173,7 @@ export function InviteGameDialog() {
 
 export interface PlayerSettings {
   name: string;
+  color: LanderColor;
 }
 export function PlayerInfoDialog(props: {
   curSettings: PlayerSettings;
@@ -192,22 +191,19 @@ export function PlayerInfoDialog(props: {
             e.preventDefault();
             const data = new FormData(e.currentTarget);
             onSave({
-              name: data.get("name")!.toString()
+              name: data.get("name")!.toString(),
+              color: data.get("color")!.toString() as LanderColor,
             });
-            setControlScheme(data.get("controlScheme")!.toString() as any);
+            if (data.get("controlScheme")) {
+              setControlScheme(data.get("controlScheme")!.toString() as any);
+            }
             close();
             onClose?.();
           }}
         >
           <Heading slot="title">Player settings</Heading>
 
-          <TextField 
-            label="Your name"
-            name="name" 
-            defaultValue={curSettings.name}
-            autoFocus
-            autoSelectAll
-          />
+          <LanderSettingsFormPart curSettings={curSettings} />
           {isTouchDevice() && (
             <SelectField 
               label="Control scheme" 
@@ -232,12 +228,53 @@ export function PlayerInfoDialog(props: {
   );
 }
 
+function LanderSettingsFormPart(props: {
+  curSettings: PlayerSettings;
+}) {
+  const { curSettings } = props;
+  return (
+    <div style={{display: "flex", gap: 8, alignItems: "flex-end"}}>
+      <TextField 
+        label="Your name"
+        name="name" 
+        defaultValue={curSettings.name}
+        autoFocus
+        autoSelectAll
+        style={{flexGrow: 1}}
+      />
+      <SelectField 
+        aria-label="Lander color" 
+        name="color" 
+        defaultSelectedKey={curSettings.color}
+        renderSelected={(opts) => {
+          console.log("RENDER", opts);
+          if (!opts.selectedText) {
+            return null;
+          }
+          return (
+            <div style={{width: 18, height: 18, backgroundColor: getLanderColor(opts.selectedText as LanderColor, 10)}} />
+          );
+        }}
+      >
+        {LANDER_COLORS.map((color: LanderColor) => (
+          <SelectOption id={color} aria-label={color} textValue={color}>
+            <div style={{display: "flex", alignItems: "center", gap: 4}}>
+              <div style={{width: 16, height: 16, backgroundColor: getLanderColor(color, 10)}} />
+              <div>{color}</div>
+            </div>
+          </SelectOption>
+        ))}
+      </SelectField>
+    </div>
+  );
+}
+
 
 export function JoinGameDialog(props: {
-  defaultName: string;
-  onJoin: (opts: {name: string}) => void;
+  curSettings: PlayerSettings;
+  onJoin: (opts: PlayerSettings) => void;
 }) {
-  const { onJoin, defaultName } = props;
+  const { onJoin, curSettings } = props;
   return (
     <Modal underlayBlur>
       {({close}) => (
@@ -246,18 +283,12 @@ export function JoinGameDialog(props: {
           onSubmit={e => {
             e.preventDefault();
             const data = Object.fromEntries(new FormData(e.currentTarget));
-            onJoin({name: data.name.toString()});
+            onJoin({name: data.name.toString(), color: data.color.toString() as LanderColor});
             close();
           }}
         >
           <Heading slot="title">Join this game</Heading>
-          <TextField 
-            label="Your name"
-            name="name" 
-            defaultValue={defaultName}
-            autoFocus
-            autoSelectAll
-          />
+          <LanderSettingsFormPart curSettings={curSettings} />
           <div style={{display: "flex", gap: 24}}>
             <Button type="submit" styleType="primary">Join!</Button>
             <Button styleType="clear" onPress={close}>Nah...</Button>

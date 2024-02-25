@@ -1,4 +1,5 @@
-import { RocketType } from "./game/constants";
+import { PlayerSettings } from "./components/dialogs";
+import { LanderColor, RocketType } from "./game/constants";
 import type { GameOptions, LanderGameState } from "./game/game-state";
 
 interface Message {
@@ -15,6 +16,7 @@ export type GameInputEvent =
 export interface JoinMessage extends Message {
   type: "join";
   name: string;
+  color: LanderColor;
 }
 
 export interface PlayerInputMessage extends Message {
@@ -34,21 +36,18 @@ export interface RequestResetGameMessage extends Message {
 }
 export interface RequestStartGameMessage extends Message {
   type: "request-start";
+  playerSettings: PlayerSettings;
   options: GameOptions;
-  name: string;
 }
 
 export interface CancelResetGameMessage extends Message {
   type: "cancel-reset";
 }
 
-export interface RequestFullSyncMessage extends Message {
-  type: "request-full";
-}
-
 export interface PlayerInfoMessage extends Message {
   type: "player-info";
   name: string;
+  color: LanderColor;
 }
 
 export interface ChatMessage extends Message {

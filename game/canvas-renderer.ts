@@ -6,7 +6,7 @@ import { grayDark, greenDark, tomatoDark, yellowDark } from "@radix-ui/colors";
 import assert from "assert";
 import { Viewport } from "pixi-viewport";
 import { Container, DisplayObject, Graphics, Renderer, Text } from "pixi.js";
-import { LANDER_TRAIL_LENGTH, LANDER_TRAIL_LIFE, LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, STEPS_PER_SECOND, WORLD_WIDTH, getLanderColor } from "./constants";
+import { LANDER_TRAIL_LENGTH, LANDER_TRAIL_LIFE, LANDING_INDICATOR_THRESHOLD, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, LanderColor, STEPS_PER_SECOND, WORLD_WIDTH, getLanderColor } from "./constants";
 import { LanderGameState } from "./game-state";
 import { GameObject } from "./objects/game-object";
 import { Ground } from "./objects/ground";
@@ -30,11 +30,13 @@ export class CanvasRenderer {
   screenRoot: Container;
   curGameId: string | undefined;
   id2trails: Map<string, RenderedObjects[]>;
+  prevLanderColors: Map<string, LanderColor>
 
   constructor() {
     this.id2gfx = new Map();
     this.id2label = new Map();
     this.id2trails = new Map();
+    this.prevLanderColors = new Map();
     this.renderer = new Renderer({
       antialias: true,
       width: window.innerWidth,
@@ -121,6 +123,12 @@ export class CanvasRenderer {
       this.reset();
       this.curGameId = game.id;
       this.viewport.worldWidth = game.moon.worldWidth;
+    }
+
+    if (game.landers.some(l => this.prevLanderColors.has(l.id) && l.color !== this.prevLanderColors.get(l.id))) {
+      // Some lander has changed colors!  Reset everything to draw them the right
+      // color. A bit dramatic but too lazy to do something fine-grained.
+      this.reset();
     }
 
     this.updateViewport(game, playerId);
@@ -214,6 +222,11 @@ export class CanvasRenderer {
     this.updateLegend(game);
 
     this.renderer.render(this.root);
+
+    this.prevLanderColors.clear();
+    for (const lander of game.landers) {
+      this.prevLanderColors.set(lander.id, lander.color);
+    }
   }
   
   private destroyRelatedGraphics(id: string) {
@@ -474,8 +487,14 @@ export class CanvasRenderer {
     const LANDER_LENGTH = lander.radius * 2;
 
     const shuttle = new Graphics();
+    shuttle.name = "shuttle";
+
+    const cockpit = new Graphics();
+    cockpit.name = "cockpit";
+    shuttle.addChild(cockpit);
     shuttle.lineStyle(2, getLanderColor(lander.color, 10));
     drawPolyline(shuttle, SHUTTLE_SHAPES.cockpit, LANDER_LENGTH);
+
     shuttle.lineStyle(1, grayDark.gray11);
     drawSegments(shuttle, [
       SHUTTLE_SHAPES.middle,

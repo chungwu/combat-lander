@@ -8,6 +8,7 @@ import { computed, makeObservable, observable, runInAction } from "mobx";
 import { KeyboardController } from "./controls";
 import pull from "lodash/pull";
 import { sortBy } from "lodash";
+import { PlayerSettings } from "@/components/dialogs";
 
 export class ClientLanderEngine extends BaseLanderEngine {
   private lastSyncTimestep: number;
@@ -237,14 +238,13 @@ export class ClientLanderEngine extends BaseLanderEngine {
     return this.game.landers.find(l => l.id === this.socket.id);
   }
 
-  joinGame(opts: {
-    name: string
-  }) {
+  joinGame(opts: PlayerSettings) {
     this.sendMessage({
       type: "join",
       gameId: this.game.id,
       time: this.timestep,
-      name: opts.name
+      name: opts.name,
+      color: opts.color,
     });
   }
 
@@ -258,10 +258,10 @@ export class ClientLanderEngine extends BaseLanderEngine {
     });
   }
 
-  startGame(name: string, gameOptions: GameOptions) {
+  startGame(playerSettings: PlayerSettings, gameOptions: GameOptions) {
     this.sendMessage({
       type: "request-start",
-      name,
+      playerSettings,
       gameId: this.game.id,
       time: this.timestep,
       options: gameOptions,
@@ -276,10 +276,11 @@ export class ClientLanderEngine extends BaseLanderEngine {
     });
   }
 
-  setPlayerSettings(opts: {name: string}) {
+  setPlayerSettings(opts: PlayerSettings) {
     this.sendMessage({
       type: "player-info",
       name: opts.name,
+      color: opts.color,
       gameId: this.game.id,
       time: this.timestep
     });
