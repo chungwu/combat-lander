@@ -112,6 +112,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
   protected reset() {
     super.reset();
     this.resetTimestamp = undefined;
+    this.inputQueue.splice(0, this.inputQueue.length);
   }
 
   dispose() {

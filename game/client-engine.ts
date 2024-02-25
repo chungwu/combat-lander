@@ -85,7 +85,6 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.reset();
         this.game.mergeFull(msg.paylod);
         this.initialTimeStep = this.timestep = this.lastSyncTimestep = msg.time;
-        this.resetPending = undefined;
       } else if (msg.type === "meta") {
         this.game.mergeMeta(msg.payload);
       } else if (msg.type === "reset-pending") {
@@ -101,6 +100,8 @@ export class ClientLanderEngine extends BaseLanderEngine {
   protected reset() {
     super.reset();
     this.controller.reset();
+    this.messageQueue.splice(0, this.messageQueue.length);
+    this.resetPending = undefined;
   }
 
   timerStep() {
