@@ -105,6 +105,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
   }
 
   timerStep() {
+    const start = performance.now();
     runInAction(() => {
       this.processLocalInputsQueue();
       this.processMessageQueue();
@@ -120,6 +121,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
         this.garbageCollect(this.lastSyncTimestep);
       }
     });
+    console.log(`[${this.timestep}] TIMESTEP ${performance.now() - start}ms\n=====`);
   }
 
   private processMessageQueue() {
