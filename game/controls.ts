@@ -242,13 +242,17 @@ export class KeyboardController {
         }
       }
     } else {
-      const normed = (val: number, actionThreshold: number=JOYSTICK_THRESHOLD) => {
+      const normed = (
+        val: number, 
+        actionThreshold: number=JOYSTICK_THRESHOLD,
+        precision: number=2
+      ) => {
         if (Math.abs(val) < actionThreshold) {
           return undefined;
         }
         let magnitude = (Math.abs(val) - actionThreshold) / (1 - actionThreshold);
         magnitude = magnitude * (val > 0 ? 1 : -1);
-        return Math.round(magnitude * 100) / 100;
+        return Math.round(magnitude * Math.pow(10, precision)) / Math.pow(10, precision);
       };
 
       if (scheme === "mixed") {
@@ -282,9 +286,9 @@ export class KeyboardController {
           targetThrottle, targetRotation, rotatingLeft: null, rotatingRight: null
         });
       } else if (scheme === "sticky") {
-        const normX = normed(event.x!, 0.01);
+        const normX = normed(event.x!, 0.01, 1);
         const targetRotation = normX == null ? 0 : normX * -0.5 * Math.PI
-        const normY = normed(event.y!);
+        const normY = normed(event.y!, JOYSTICK_THRESHOLD, 1);
         const targetThrottle = normY == null ? lander.throttle : normY < 0 ? 0 : normY;
         this.maybeProcessJoystickEvent({
           type: "joystick",
