@@ -167,13 +167,20 @@ export class ClientLanderEngine extends BaseLanderEngine {
         console.log(`[${this.timestep}] Applying sync from ${lastSyncMsg.time}`);
         assert(lastSyncMsg.time >= this.lastSyncTimestep, `[${this.timestep}] Got sync messages out of order? lastSyncMsg.time=${lastSyncMsg.time} but last sync was ${this.lastSyncTimestep}`);
         // Restore to that snapshot
-        this.restoreSnapshot({
-          time: lastSyncMsg.time,
-          snapshot: {
-            ...lastSyncMsg.payload,
-            world: lastSyncMsg.payload.world.takeSnapshot()
-          }
-        });
+        this.restoreSnapshot(
+          {
+            time: lastSyncMsg.time,
+            snapshot: {
+              ...lastSyncMsg.payload,
+              world: lastSyncMsg.payload.world.takeSnapshot()
+            }
+          },
+          // We remove landers or rockets that are not in the server's sync snapshot. It is safe to
+          // do because any local rockets we've created should already be reflected in this snapshot,
+          // since we are in the else branch here.  This makes sure we take the server's snapshot
+          // of the world as authoritative.
+          true
+        );
         this.lastSyncTimestep = lastSyncMsg.time;
       }
     }

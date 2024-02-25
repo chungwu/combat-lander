@@ -261,12 +261,12 @@ export class LanderGameState {
     };
   }
 
-  mergeSnapshot(snapshot: ReturnType<typeof this.takeSnapshot>) {
+  mergeSnapshot(snapshot: ReturnType<typeof this.takeSnapshot>, remove: boolean) {
     const snapshot2 = {
       ...snapshot,
       world: World.restoreSnapshot(snapshot.world)
     };
-    this.mergePartial(snapshot2);
+    this.mergePartial(snapshot2, remove);
   }
 
   takeSnapshot() {
@@ -306,8 +306,8 @@ export class LanderGameState {
     this.world = payload.world;
     this.ground.mergeFrom(this.world, payload.ground);
     this.sky.mergeFrom(this.world, payload.sky);
-    this.mergeLanders(payload.landers);
-    this.mergeRockets(payload.rockets);
+    this.mergeLanders(payload.landers, true);
+    this.mergeRockets(payload.rockets, true);
     for (let i=0; i<payload.landingPads.length; i++) {
       this.landingPads[i].mergeFrom(this.world, payload.landingPads[i]);
     }
@@ -317,14 +317,14 @@ export class LanderGameState {
     prevWorld.free();
   }
 
-  mergePartial(payload: ReturnType<typeof this.serializePartial>) {
+  mergePartial(payload: ReturnType<typeof this.serializePartial>, remove: boolean) {
     const prevWorld = this.world;
     this.id = payload.id;
     this.world = payload.world;
     this.ground.updateCollider(this.world, this.ground.handle);
     this.sky.updateCollider(this.world, this.sky.handle);
-    this.mergeLanders(payload.landers);
-    this.mergeRockets(payload.rockets);
+    this.mergeLanders(payload.landers, remove);
+    this.mergeRockets(payload.rockets, remove);
     for (const pad of this.landingPads) {
       pad.updateCollider(this.world, pad.handle);
     }
@@ -337,18 +337,20 @@ export class LanderGameState {
     this.playerWins = payload.playerWins;
   }
 
-  mergeLanders(fromLanders: ReturnType<typeof this.serializeFull>["landers"]) {
+  mergeLanders(fromLanders: ReturnType<typeof this.serializeFull>["landers"], remove: boolean) {
     this.mergeObjects(
       "landers",
       fromLanders,
-      (fromLander) => Lander.createFrom(this.world, fromLander)
+      (fromLander) => Lander.createFrom(this.world, fromLander),
+      remove
     );
   }
 
-  mergeRockets(fromRockets: ReturnType<typeof this.serializeFull>["rockets"]) {
+  mergeRockets(fromRockets: ReturnType<typeof this.serializeFull>["rockets"], remove: boolean) {
     this.mergeObjects(
       "rockets", fromRockets,
-      (fromObj) => Rocket.createFrom(this.world, fromObj)
+      (fromObj) => Rocket.createFrom(this.world, fromObj),
+      remove
     );
   }
 
@@ -356,6 +358,7 @@ export class LanderGameState {
     field: ObjectsField,
     fromObjs: ReturnType<typeof this.serializeFull>[ObjectsField],
     createFrom: (fromObj: ArrayElementType<ReturnType<typeof this.serializeFull>[ObjectsField]>) => any,
+    remove: boolean,
   ) {
     for (const fromObj of fromObjs) {
       const cur = this[field].find(x => x.id === fromObj.id);
@@ -367,11 +370,14 @@ export class LanderGameState {
       }
     }
 
-    // We also remove objects not in `fromObjects`. This is safe to do, and
-    // there's never any "valid" objects locally that's not in `fromObjects`,
-    // because we never create them locally; only server can create objects.
-    const validIds = fromObjs.map(x => x.id);
-    const staleObjs = this[field].filter(r => !validIds.includes(r.id));
-    pull(this[field], ...staleObjs);
+    if (remove) {
+      // If remove is true, then we also remove objects not in `fromObjects`. 
+      // We'll only want to do this when we consider `fromObjs` as "authoritative";
+      // we should NOT do this if we are just applying a past snapshot of our world,
+      // as _its_ list of objects is necessarily outdated.
+      const validIds = fromObjs.map(x => x.id);
+      const staleObjs = this[field].filter(r => !validIds.includes(r.id));
+      pull(this[field], ...staleObjs);
+    }
   }
 }

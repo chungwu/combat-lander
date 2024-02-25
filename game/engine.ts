@@ -110,9 +110,9 @@ export class BaseLanderEngine {
     }
   }
 
-  protected restoreSnapshot(snapshot: GameSnapshot) {
+  protected restoreSnapshot(snapshot: GameSnapshot, remove: boolean) {
     // console.log(`[${this.timestep}] Restoring to ${snapshot.time}`);
-    this.game.mergeSnapshot(snapshot.snapshot);
+    this.game.mergeSnapshot(snapshot.snapshot, remove);
     this.timestep = snapshot.time;
   }
 
@@ -123,14 +123,13 @@ export class BaseLanderEngine {
    *   unnecessary. Passing true here will for force the restore to happen;
    *   do it if you know the snapshot is different from the current state.
    */
-  protected restoreSnapshotTo(time: number, opts?: {forceRestore?: boolean}) {
+  protected restoreSnapshotTo(time: number, opts?: {forceRestore?: boolean, remove?: boolean}) {
     if (time === this.timestep && !opts?.forceRestore) {
       return true;
     }
     const snapshot = this.findClosestSnapshot(time);
     if (snapshot) {
-      // console.log(`[${this.timestep}] FOUND closest ${snapshot.time}`);
-      this.restoreSnapshot(snapshot);
+      this.restoreSnapshot(snapshot, opts?.remove ?? false);
       return true;
     } else {
       console.log(`[${this.timestep} FAILED to restore snapshot to ${time}]`);
