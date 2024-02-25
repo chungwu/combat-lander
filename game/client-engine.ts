@@ -15,6 +15,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
   public resetPending: ResetPendingMessage | undefined;
   private chatListeners: ((msg: ChatMessage) => void)[] = [];
   private messageQueue: (PartialSyncMessage | PlayerInputMessage)[] = [];
+  private localInputsQueue: PlayerInputMessage[] = [];
   constructor(
     state: LanderGameState,
     private socket: PartySocket,
@@ -60,8 +61,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
         gameId: this.game.id,
         event
       } as const;
-      this.savePlayerEvent(msg);
-      this.sendMessage(msg);
+      this.localInputsQueue.push(msg);
     }
   }
 
@@ -106,6 +106,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
 
   timerStep() {
     runInAction(() => {
+      this.processLocalInputsQueue();
       this.processMessageQueue();
 
       // If there are player inputs from the future, apply them now
@@ -193,6 +194,19 @@ export class ClientLanderEngine extends BaseLanderEngine {
     // inputs along the way. One wrinkle is that the lastSyncMsg.time may be in the future!
     // In that case, we will also go ahead and catch up to the future.
     this.replayTo(Math.max(curTime, lastSyncMsg?.time ?? 0));
+  }
+
+  private processLocalInputsQueue() {
+    let msgs = sortBy(this.localInputsQueue, m => m.time);
+    this.localInputsQueue.splice(0, this.localInputsQueue.length);
+
+    // only keep the last joystick event
+    const lastJoystickIndex = msgs.findLastIndex(m => m.event.type === "joystick");
+    msgs = msgs.filter((m, i) => m.event.type !== "joystick" || i === lastJoystickIndex);
+    for (const msg of msgs) {
+      this.savePlayerEvent(msg);
+      this.sendMessage(msg);
+    }
   }
 
   protected postStepOne(): void {
