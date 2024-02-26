@@ -181,7 +181,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
     // ignore events from before lastSyncTimestep, because those inputs should've been
     // already incorporated when we applied the last sync.
     const fromTime = Math.max(this.lastSyncTimestep, playerInputs[0]?.time ?? 0);
-    if (fromTime != 0 && playerInputs.some(x => x.time > fromTime)) {
+    if (fromTime != 0 && playerInputs.some(x => x.time >= fromTime)) {
       this.restoreSnapshotTo(fromTime);
     }
 
