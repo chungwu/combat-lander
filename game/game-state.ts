@@ -177,20 +177,39 @@ export class LanderGameState {
   }
 
   applyPlayerInput(playerId: string, event: GameInputEvent, timestep: number) {
-    const lander = this.landers.find(l => l.id === playerId);
-    if (lander && lander.isAlive()) {
-      if (event.type === "fire-rocket") {
-        if (lander.rocketState[event.rocketType].count > 0) {
-          const rocket = Rocket.create(
-            this, lander, { rocketType: event.rocketType, id: event.id }
-          );
-          this.rockets.push(rocket);
-          this.fireRocket(lander, rocket);
-          lander.rocketState[event.rocketType].count -= 1;
-          lander.rocketState[event.rocketType].replenishFromTimestep = timestep;
-        }
+    if (event.type === "joined") {
+      if (this.landers.find(l => l.id === event.playerId)) {
+        // Right now this is a bit yucky, but... the player join event is at the same
+        // timestep as the sync message that includes that joined player. Usually
+        // the effect of an event is only seen at the next timestep. So, this might
+        // happen, and we just ignore it for now!
       } else {
-        lander.processInput(event);
+        const lander = Lander.create(this, {
+          id: event.playerId,
+          name: event.name,
+          color: event.color,
+          startingLocation: new Vector2(event.startX, event.startY),
+        });
+        this.landers.push(lander);
+      }
+    } else {
+      const lander = this.landers.find(l => l.id === playerId);
+      if (lander && lander.isAlive()) {
+        if (event.type === "fire-rocket") {
+          if (this.rockets.find(r => r.id === event.id)) {
+            // This is yucky for the same reason as duplicate lander above...
+          } else if (lander.rocketState[event.rocketType].count > 0) {
+            const rocket = Rocket.create(
+              this, lander, { rocketType: event.rocketType, id: event.id }
+            );
+            this.rockets.push(rocket);
+            this.fireRocket(lander, rocket);
+            lander.rocketState[event.rocketType].count -= 1;
+            lander.rocketState[event.rocketType].replenishFromTimestep = timestep;
+          }
+        } else {
+          lander.processInput(event);
+        }
       }
     }
   }
@@ -261,12 +280,12 @@ export class LanderGameState {
     };
   }
 
-  mergeSnapshot(snapshot: ReturnType<typeof this.takeSnapshot>, remove: boolean) {
+  mergeSnapshot(snapshot: ReturnType<typeof this.takeSnapshot>) {
     const snapshot2 = {
       ...snapshot,
       world: World.restoreSnapshot(snapshot.world)
     };
-    this.mergePartial(snapshot2, remove);
+    this.mergePartial(snapshot2);
   }
 
   takeSnapshot() {
@@ -306,8 +325,8 @@ export class LanderGameState {
     this.world = payload.world;
     this.ground.mergeFrom(this.world, payload.ground);
     this.sky.mergeFrom(this.world, payload.sky);
-    this.mergeLanders(payload.landers, true);
-    this.mergeRockets(payload.rockets, true);
+    this.mergeLanders(payload.landers);
+    this.mergeRockets(payload.rockets);
     for (let i=0; i<payload.landingPads.length; i++) {
       this.landingPads[i].mergeFrom(this.world, payload.landingPads[i]);
     }
@@ -317,14 +336,14 @@ export class LanderGameState {
     prevWorld.free();
   }
 
-  mergePartial(payload: ReturnType<typeof this.serializePartial>, remove: boolean) {
+  mergePartial(payload: ReturnType<typeof this.serializePartial>) {
     const prevWorld = this.world;
     this.id = payload.id;
     this.world = payload.world;
     this.ground.updateCollider(this.world, this.ground.handle);
     this.sky.updateCollider(this.world, this.sky.handle);
-    this.mergeLanders(payload.landers, remove);
-    this.mergeRockets(payload.rockets, remove);
+    this.mergeLanders(payload.landers);
+    this.mergeRockets(payload.rockets);
     for (const pad of this.landingPads) {
       pad.updateCollider(this.world, pad.handle);
     }
@@ -337,20 +356,18 @@ export class LanderGameState {
     this.playerWins = payload.playerWins;
   }
 
-  mergeLanders(fromLanders: ReturnType<typeof this.serializeFull>["landers"], remove: boolean) {
+  mergeLanders(fromLanders: ReturnType<typeof this.serializeFull>["landers"]) {
     this.mergeObjects(
       "landers",
       fromLanders,
       (fromLander) => Lander.createFrom(this.world, fromLander),
-      remove
     );
   }
 
-  mergeRockets(fromRockets: ReturnType<typeof this.serializeFull>["rockets"], remove: boolean) {
+  mergeRockets(fromRockets: ReturnType<typeof this.serializeFull>["rockets"]) {
     this.mergeObjects(
       "rockets", fromRockets,
       (fromObj) => Rocket.createFrom(this.world, fromObj),
-      remove
     );
   }
 
@@ -358,7 +375,6 @@ export class LanderGameState {
     field: ObjectsField,
     fromObjs: ReturnType<typeof this.serializeFull>[ObjectsField],
     createFrom: (fromObj: ArrayElementType<ReturnType<typeof this.serializeFull>[ObjectsField]>) => any,
-    remove: boolean,
   ) {
     for (const fromObj of fromObjs) {
       const cur = this[field].find(x => x.id === fromObj.id);
@@ -370,14 +386,13 @@ export class LanderGameState {
       }
     }
 
-    if (remove) {
-      // If remove is true, then we also remove objects not in `fromObjects`. 
-      // We'll only want to do this when we consider `fromObjs` as "authoritative";
-      // we should NOT do this if we are just applying a past snapshot of our world,
-      // as _its_ list of objects is necessarily outdated.
-      const validIds = fromObjs.map(x => x.id);
-      const staleObjs = this[field].filter(r => !validIds.includes(r.id));
-      pull(this[field], ...staleObjs);
-    }
+    // We also remove objects not in `fromObjects`. Careful; we do this because we
+    // consider fromObjs to be authoratative. But when restoring snapshots, you may
+    // end up with a snapshot that has fewer objects than the current state, so 
+    // you need to make sure your reply will add those objects back in (for example,
+    // players joining and rockets being fired).
+    const validIds = fromObjs.map(x => x.id);
+    const staleObjs = this[field].filter(r => !validIds.includes(r.id));
+    pull(this[field], ...staleObjs);
   }
 }

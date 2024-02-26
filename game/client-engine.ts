@@ -40,18 +40,6 @@ export class ClientLanderEngine extends BaseLanderEngine {
     this.socket.send(JSON.stringify(msg));
   }
 
-  protected applyPlayerInput(playerId: string, event: GameInputEvent): void {
-    if (event.type === "fire-rocket") {
-      // We only apply fire-rocket locally; we depend on 
-      // server syncs to get other player's rockets
-      if (playerId === this.playerId) {
-        super.applyPlayerInput(playerId, event);
-      }
-    } else {
-      super.applyPlayerInput(playerId, event);
-    }
-  }
-
   processLocalInput(event: GameInputEvent) {
     const lander = this.selfLander;
     if (lander) {
@@ -113,7 +101,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
 
       // If there are player inputs from the future, apply them now
       // before we step
-      this.applyPlayerInputsAt(m => m.time === this.timestep && m.playerId !== this.playerId);
+      // this.applyPlayerInputsAt(m => m.time === this.timestep && m.playerId !== this.playerId);
   
       super.timerStep();
   
@@ -175,12 +163,7 @@ export class ClientLanderEngine extends BaseLanderEngine {
               ...lastSyncMsg.payload,
               world: lastSyncMsg.payload.world.takeSnapshot()
             }
-          },
-          // We remove landers or rockets that are not in the server's sync snapshot. It is safe to
-          // do because any local rockets we've created should already be reflected in this snapshot,
-          // since we are in the else branch here.  This makes sure we take the server's snapshot
-          // of the world as authoritative.
-          true
+          }
         );
         this.lastSyncTimestep = lastSyncMsg.time;
       }
@@ -198,10 +181,10 @@ export class ClientLanderEngine extends BaseLanderEngine {
     // ignore events from before lastSyncTimestep, because those inputs should've been
     // already incorporated when we applied the last sync.
     const fromTime = Math.max(this.lastSyncTimestep, playerInputs[0]?.time ?? 0);
-    if (fromTime != null && playerInputs.some(x => x.time >= fromTime)) {
+    if (fromTime != 0 && playerInputs.some(x => x.time > fromTime)) {
       this.restoreSnapshotTo(fromTime);
     }
-    
+
     // Now, we just have to replay to the current time, which will also apply the player
     // inputs along the way. One wrinkle is that the lastSyncMsg.time may be in the future!
     // In that case, we will also go ahead and catch up to the future.

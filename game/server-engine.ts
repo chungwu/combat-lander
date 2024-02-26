@@ -46,6 +46,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
       color: opts.color ?? pickColor()
     });
     this.game.landers.push(lander);
+    return lander;
   }
 
   handleMessage(sender: Connection, msg: ClientMessage) {
@@ -55,12 +56,28 @@ export class ServerLanderEngine extends BaseLanderEngine {
     }
     console.log(`[${this.timestep}] GOT MESSAGE @ ${msg.time} of ${msg.type}`)
     if (msg.type === "join") {
-      this.addPlayer({
+      const lander = this.addPlayer({
         id: sender.id,
         name: msg.name,
         color: msg.color,
       });
+      const playerEvent: PlayerInputMessage = {
+        type: "input",
+        playerId: lander.id,
+        gameId: this.game.id,
+        time: msg.time,
+        event: {
+          type: "joined",
+          playerId: lander.id,
+          name: lander.name,
+          color: lander.color,
+          startX: lander.x,
+          startY: lander.y,
+        }
+      };
+      this.savePlayerEvent(playerEvent);
       this.send(sender, this.makeResetMessage());
+      this.broadcast(playerEvent);
       this.broadcast(this.makePartialMessage());
     } else if (msg.type === "input") {
       this.inputQueue.push(msg);
@@ -273,7 +290,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
 
   protected applyPlayerInput(playerId: string, event: GameInputEvent): void {
     super.applyPlayerInput(playerId, event);
-    if (event.type === "fire-rocket") {
+    if (event.type === "fire-rocket" || event.type === "joined") {
       this.shouldImmediatelyBroadcastSync = true;
     }
     if (this.timestep < this.lastSyncTimestep) {
