@@ -19,6 +19,7 @@
 
 .popover {
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--control-border);
   background-color: transparent;
 }

@@ -34,6 +34,7 @@
   display: flex;
   flex-direction: column;
   backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: var(--z-hud);
   font-size: var(--text-size-small);
 }
@@ -75,6 +76,7 @@
   color: var(--gray-10);
   transition: all 0.2s;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 1px 2px var(--control-border);
@@ -124,6 +126,7 @@
   background-color: transparent !important;
   border: 1px solid var(--control-border);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .joystickOverlay button {
@@ -190,6 +193,7 @@
 .rocket {
   border: 1px solid transparent;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .rocketUsed, .rocketRefilling {
@@ -237,6 +241,7 @@
   overflow: hidden;
   flex-shrink: 0;
   backdrop-filter: blur(1px);
+  -webkit-backdrop-filter: blur(1px);
 }
 
 .chatMessageBg {

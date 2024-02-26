@@ -14,19 +14,13 @@ export function Modal(props: {
   const { children, underlayBlur, modalBlur, isOpen, onOpenChange, ...rest } = props;
   return (
     <ModalOverlay
-      className={classNames("app", "dark", MONO.variable, sty.underlay)}
+      className={classNames("app", "dark", MONO.variable, sty.underlay, {[sty.blurred]: underlayBlur})}
       isOpen={isOpen}
-      style={{
-        backdropFilter: underlayBlur ? "blur(8px)" : undefined,
-      }}
       isDismissable={true}
       onOpenChange={onOpenChange}
     >
       <BaseModal
-        className={sty.modal}
-        style={{
-          backdropFilter: modalBlur ? "blur(8px)" : undefined,
-        }}
+        className={classNames(sty.modal, {[sty.blurred]: modalBlur})}
       >
         <div
           onKeyDown={e => e.stopPropagation()}
@@ -55,18 +49,12 @@ export function Alert(props: {
   const { children, underlayBlur, modalBlur, isOpen, ...rest } = props;
   return (
     <ModalOverlay
-      className={classNames("app", "dark", MONO.variable, sty.underlay, sty.modalAlert)}
+      className={classNames("app", "dark", MONO.variable, sty.underlay, sty.modalAlert, {[sty.blurred]: underlayBlur})}
       isOpen={isOpen}
-      style={{
-        backdropFilter: underlayBlur ? "blur(1px)" : undefined,
-      }}
       isDismissable={false}
     >
       <BaseModal
-        className={sty.modal}
-        style={{
-          backdropFilter: modalBlur ? "blur(8px)" : undefined,
-        }}
+        className={classNames(sty.modal, {[sty.blurred]: modalBlur})}
       >
         {children}
       </BaseModal>
