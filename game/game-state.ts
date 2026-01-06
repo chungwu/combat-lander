@@ -1,7 +1,7 @@
 import { GameInputEvent } from "@/messages";
 import { addVector, rotateVector, scaleVector, vectorDistance } from "@/utils/math";
 import { ArrayElementType, ensure, isServer } from "@/utils/utils";
-import { EventQueue, World } from "@dimforge/rapier2d";
+import { EventQueue, Vector2, World } from "@dimforge/rapier2d";
 import assert from "assert";
 import pull from "lodash/pull";
 import { makeObservable, observable } from "mobx";
