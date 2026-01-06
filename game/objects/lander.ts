@@ -63,6 +63,7 @@ export class Lander extends GameObject {
     const body = game.world.createRigidBody(
       Rapier.RigidBodyDesc.dynamic()
       .setTranslation(opts.startingLocation.x, opts.startingLocation.y)
+      .setCcdEnabled(true)
     );
     const colliderDesc = Rapier.ColliderDesc.ball(LANDER_RADIUS).setRestitution(0.7).setDensity(1).setActiveEvents(ActiveEvents.CONTACT_FORCE_EVENTS | ActiveEvents.COLLISION_EVENTS).setContactForceEventThreshold(0);
     const collider = game.world.createCollider(
