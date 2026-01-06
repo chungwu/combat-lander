@@ -174,7 +174,10 @@ const TopRight = observer(function TopRight(props: {}) {
             engine.setPlayerSettings(opts);
           }}
           isOpen
-          onClose={() => setPlayerSettingsOpen(false)}
+          onClose={() => {
+            setPlayerSettingsOpen(false);
+            blurActive();
+          }}
         />
       )}
     </>
