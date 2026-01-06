@@ -5,7 +5,7 @@ import { EventQueue, Vector2, World } from "@dimforge/rapier2d";
 import assert from "assert";
 import pull from "lodash/pull";
 import { makeObservable, observable } from "mobx";
-import { CONTACT_DAMAGE_FACTOR, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, ROCKET_STATS, STEPS_PER_SECOND } from "./constants";
+import { CONTACT_DAMAGE_FACTOR, LANDING_PAD_STATS, LANDING_SAFE_ROTATION, LANDING_SAFE_VX, LANDING_SAFE_VY, ROCKET_STATS, SKY_CEILING_DAMPING, SKY_CEILING_SPRING, STEPS_PER_SECOND } from "./constants";
 import { Moon, generateRandomMap } from "./map";
 import { Ground } from "./objects/ground";
 import { Lander } from "./objects/lander";
@@ -108,6 +108,8 @@ export class LanderGameState {
       steppable.preStep(dt, timestep, this.options);
     }
 
+    this.applySkyCeilingForces();
+
     this.world.step(this.eventQueue);
 
     const colliders = this.buildColliderMap();
@@ -144,6 +146,18 @@ export class LanderGameState {
     for (const steppable of this.steppables()) {
       steppable.postStep(dt, timestep, this.options);
       steppable.wrapTranslation(this.moon.worldWidth);
+    }
+  }
+
+  private applySkyCeilingForces() {
+    for (const lander of this.landers) {
+      const penetration = lander.translation.y - this.moon.worldHeight;
+      if (penetration > 0) {
+        const velocityY = lander.body.linvel().y;
+        const damping = Math.max(0, velocityY) * SKY_CEILING_DAMPING;
+        const forceY = -(SKY_CEILING_SPRING * penetration + damping);
+        lander.body.addForce(new Vector2(0, forceY), true);
+      }
     }
   }
 
