@@ -156,15 +156,15 @@ export class ClientLanderEngine extends BaseLanderEngine {
         console.log(`[${this.timestep}] Applying sync from ${lastSyncMsg.time}`);
         assert(lastSyncMsg.time >= this.lastSyncTimestep, `[${this.timestep}] Got sync messages out of order? lastSyncMsg.time=${lastSyncMsg.time} but last sync was ${this.lastSyncTimestep}`);
         // Restore to that snapshot
-        this.restoreSnapshot(
-          {
-            time: lastSyncMsg.time,
-            snapshot: {
-              ...lastSyncMsg.payload,
-              world: lastSyncMsg.payload.world.takeSnapshot()
-            }
+        const syncSnapshot = {
+          time: lastSyncMsg.time,
+          snapshot: {
+            ...lastSyncMsg.payload,
+            world: lastSyncMsg.payload.world.takeSnapshot()
           }
-        );
+        };
+        this.restoreSnapshot(syncSnapshot);
+        this.insertSnapshot(syncSnapshot);
         this.lastSyncTimestep = lastSyncMsg.time;
       }
     }
