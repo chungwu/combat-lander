@@ -157,6 +157,8 @@ export class LanderGameState {
     return map;
   }
 
+  
+
   maybeRemoveObjects() {
     let removed = false;
     for (const steppable of this.steppables()) {
