@@ -1,6 +1,0 @@
-{
-  "$schema": "https://www.partykit.io/schema.json",
-  "name": "combat-lander-party",
-  "main": "party/index.ts",
-  "compatibilityDate": "2024-02-07"
-}
