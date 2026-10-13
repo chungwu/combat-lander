@@ -2,6 +2,15 @@ name: Deploy PartyServer
 
 on:
   workflow_dispatch:
+    inputs:
+      verify_frontend:
+        description: Run browser verification without deploying the server
+        type: boolean
+        default: false
+      game_url:
+        description: Frontend URL to verify (blank builds and serves this commit locally)
+        type: string
+        default: ""
   push:
     branches: [main]
     paths:
@@ -24,6 +33,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ !inputs.verify_frontend }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -54,6 +64,43 @@ jobs:
           throw new Error('Multiplayer server did not become ready');
           NODE
           npm run test:multiplayer
+  verify_frontend:
+    if: ${{ inputs.verify_frontend }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - name: Install browser test driver
+        run: |
+          python3 -m venv /tmp/combat-lander-browser-env
+          /tmp/combat-lander-browser-env/bin/pip install playwright==1.62.0
+      - name: Verify two players in the browser
+        env:
+          GAME_URL: ${{ inputs.game_url || 'http://127.0.0.1:3000' }}
+        run: |
+          npm run start > /tmp/combat-lander-frontend.log 2>&1 &
+          frontend_pid=$!
+          trap 'kill "$frontend_pid" 2>/dev/null || true' EXIT
+          node --input-type=module <<'NODE'
+          for (let attempt = 0; attempt < 30; attempt++) {
+            try {
+              const response = await fetch('http://127.0.0.1:3000');
+              if (response.ok) process.exit(0);
+            } catch {}
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          throw new Error('Frontend did not become ready');
+          NODE
+          /tmp/combat-lander-browser-env/bin/python scripts/test-browser.py
       - name: Ensure workers.dev address exists
         id: workers_address
         run: node scripts/ensure-workers-subdomain.mjs

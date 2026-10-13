@@ -15,9 +15,11 @@ npm run dev:server
 npm run dev
 ```
 
-The frontend reads `NEXT_PUBLIC_PARTYKIT_HOST`; locally it should be
-`localhost:1999`. The variable name and existing PartySocket client are retained
-for compatibility, but the server now runs on PartyServer.
+The frontend reads `NEXT_PUBLIC_PARTYSERVER_HOST`, falling back to the legacy
+`NEXT_PUBLIC_PARTYKIT_HOST` setting. Local development defaults to
+`localhost:1999`; production builds use the deployed Cloudflare hostname in
+`.env.production`. These public host settings contain no credentials. The
+existing PartySocket client is retained.
 
 ```sh
 npm run typecheck

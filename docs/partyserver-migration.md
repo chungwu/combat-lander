@@ -62,13 +62,21 @@ connections close afterward.
 ## Cut over the existing Vercel frontend
 
 Keep the existing `combat-lander` Vercel project in `chungwus-projects` and its
-`lander.gg` domain. Save the current `NEXT_PUBLIC_PARTYKIT_HOST` value for
-rollback. Set the variable to the returned Worker **hostname**, without an
+`lander.gg` domain. The frontend prefers `NEXT_PUBLIC_PARTYSERVER_HOST`, falling
+back to `NEXT_PUBLIC_PARTYKIT_HOST` for legacy/local configurations. Set the
+new variable to the returned Worker **hostname**, without an
 `https://` prefix or trailing path, first in Preview and then in Production.
 
-In Vercel's project settings, change the variable and redeploy the frontend.
-The variable is public and embedded at build time, so a running deployment does
-not pick up a changed value until it is rebuilt.
+The checked-in `.env.production` supplies the public hostname
+`combat-lander-party.chungwu-combat-lander.workers.dev` for both Preview and
+Production builds, so the existing Vercel Git integration can deploy the
+cutover. A Vercel setting for `NEXT_PUBLIC_PARTYSERVER_HOST` overrides this
+default. The old `NEXT_PUBLIC_PARTYKIT_HOST` setting can remain during migration;
+it is used only when the new variable is absent.
+
+Host variables are embedded at build time. A running deployment does not pick
+up a changed value until it is rebuilt. Save the previous deployment and host
+for rollback.
 
 If deploying locally, authenticate and explicitly select the existing project:
 
@@ -124,8 +132,9 @@ Frontend deployments continue through the existing Vercel Git integration.
 
 ## Rollback
 
-Before October 23, if the old PartyKit server is still available, restore the
-previous public host value and roll back to the previous frontend deployment.
+Before October 23, if the old PartyKit server is still available, roll back to
+the previous frontend deployment, or set `NEXT_PUBLIC_PARTYSERVER_HOST` to the
+previous PartyKit host and rebuild.
 After PartyKit shuts down, roll back to a known-working PartyServer Worker
 version and a frontend built with its hostname instead. Live game state is not
 preserved across backend restarts or deployment changes.
