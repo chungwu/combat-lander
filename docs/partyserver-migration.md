@@ -62,7 +62,7 @@ connections close afterward.
 ## Cut over the existing Vercel frontend
 
 Keep the existing `combat-lander` Vercel project in `chungwus-projects` and its
-`lander.gg` domain. The frontend prefers `NEXT_PUBLIC_PARTYSERVER_HOST`, falling
+`combat-lander.vercel.app` production address. The frontend prefers `NEXT_PUBLIC_PARTYSERVER_HOST`, falling
 back to `NEXT_PUBLIC_PARTYKIT_HOST` for legacy/local configurations. Set the
 new variable to the returned Worker **hostname**, without an
 `https://` prefix or trailing path, first in Preview and then in Production.
@@ -111,7 +111,7 @@ Test that staged deployment, then promote the exact returned deployment URL:
 vercel promote <staged-deployment-url> --scope chungwus-projects
 ```
 
-Verify `https://lander.gg` connects to the Worker and multiplayer still works.
+Verify `https://combat-lander.vercel.app` connects to the Worker and multiplayer still works.
 Do not promote a build that still references the old PartyKit hostname.
 
 ## Continuous deployment
@@ -133,7 +133,7 @@ Frontend deployments continue through the existing Vercel Git integration.
 For browser verification, manually run `Deploy PartyServer` with
 `verify_frontend=true`. With a blank `game_url`, it builds and serves the
 selected commit locally and checks two players against the live Worker. Set
-`game_url=https://lander.gg` to verify the published site. This mode skips the
+`game_url=https://combat-lander.vercel.app` to verify the published site. This mode skips the
 server deployment job and does not receive Cloudflare credentials. It checks
 starting/joining a game, keyboard thrust, rockets, chat, canvas rendering, and
 the actual WebSocket hostname.
