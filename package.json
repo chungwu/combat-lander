@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "dev:server": "wrangler dev --port 1999",
+    "build:server": "wrangler deploy --dry-run --outdir /tmp/combat-lander-worker",
+    "deploy:server": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test:multiplayer": "node scripts/test-multiplayer.mjs"
   },
   "dependencies": {
     "@dimforge/rapier2d": "^0.12.0",
@@ -24,6 +29,7 @@
     "nanoid": "^5.0.5",
     "next": "14.1.0",
     "normalize.css": "^8.0.1",
+    "partyserver": "0.5.10",
     "partysocket": "0.0.25",
     "pixi-viewport": "^5.0.2",
     "pixi.js": "^7.4.0",
@@ -34,11 +40,12 @@
     "react-joystick-component": "^6.2.1"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "5.20261013.1",
     "@types/lodash": "^4.14.202",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "partykit": "0.0.84",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "4.149.0"
   }
 }

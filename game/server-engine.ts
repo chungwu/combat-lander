@@ -1,6 +1,6 @@
 import { ClientMessage, GameInputEvent, PlayerInputMessage, ResetOptions, ResetPendingMessage, ServerMessage } from "@/messages";
 import { Vector2 } from "@dimforge/rapier2d";
-import { Connection, Room } from "partykit/server";
+import type { Connection, Server } from "partyserver";
 import { BaseLanderEngine } from "./engine";
 import { GameOptions, LanderGameState } from "./game-state";
 import { Lander } from "./objects/lander";
@@ -16,9 +16,10 @@ export class ServerLanderEngine extends BaseLanderEngine {
   private intervalId: any | undefined;
   private lastSyncTimestep: number = 0;
   private resetTimestamp: number | undefined = undefined;
+  private resetTimer: ReturnType<typeof setTimeout> | undefined;
   private inputQueue: PlayerInputMessage[] = [];
 
-  constructor(private room: Room) {
+  constructor(private room: Pick<Server, "broadcast">) {
     const game = LanderGameState.createNew({
       options: {
         infiniteFuel: true,
@@ -94,13 +95,15 @@ export class ServerLanderEngine extends BaseLanderEngine {
       const waitTime = 1000 * RESET_GAME_WAIT;
       this.resetTimestamp = new Date().getTime() + waitTime;
       this.broadcast(this.makeResetPendingMessage("requested", this.resetTimestamp));
-      setTimeout(() => {
+      this.scheduleReset(() => {
         if (this.resetTimestamp != undefined) {
           // Really reset the game!
           this.resetGame(msg.options, msg.resetOptions);
         }
       }, waitTime);
     } else if (msg.type === "cancel-reset") {
+      clearTimeout(this.resetTimer);
+      this.resetTimer = undefined;
       this.resetTimestamp = undefined;
       this.broadcast({
         type: "reset-cancelled",
@@ -131,12 +134,24 @@ export class ServerLanderEngine extends BaseLanderEngine {
 
   protected reset() {
     super.reset();
+    clearTimeout(this.resetTimer);
+    this.resetTimer = undefined;
     this.resetTimestamp = undefined;
     this.inputQueue.splice(0, this.inputQueue.length);
   }
 
   dispose() {
+    clearInterval(this.intervalId);
+    this.intervalId = undefined;
+    clearTimeout(this.resetTimer);
+    this.resetTimer = undefined;
+    this.resetTimestamp = undefined;
     this.game.world.free();
+  }
+
+  private scheduleReset(callback: () => void, delay: number) {
+    clearTimeout(this.resetTimer);
+    this.resetTimer = setTimeout(callback, delay);
   }
 
   private resetGame(gameOptions: GameOptions, resetOptions: ResetOptions) {
@@ -231,7 +246,7 @@ export class ServerLanderEngine extends BaseLanderEngine {
         this.resetTimestamp = new Date().getTime() + waitTime;
         this.broadcast(this.makeMetaMessage());
         this.broadcast(this.makeResetPendingMessage(this.game.wonPlayer ? "won" : "dead", this.resetTimestamp));
-        setTimeout(() => {
+        this.scheduleReset(() => {
           if (this.resetTimestamp != undefined) {
             this.resetGame(this.game.options, { preserveMap: false, preserveScores: true});
           }

@@ -4,6 +4,31 @@ This is a real time multiplayer game inspired by the lunar lander arcade game. Y
 
 You can play it at [lander.gg](https://lander.gg).
 
+## Development and deployment
+
+Requires Node.js 22 or later (CI uses Node.js 24).
+
+```sh
+npm ci
+npm run dev:server
+# In another terminal:
+npm run dev
+```
+
+The frontend reads `NEXT_PUBLIC_PARTYKIT_HOST`; locally it should be
+`localhost:1999`. The variable name and existing PartySocket client are retained
+for compatibility, but the server now runs on PartyServer.
+
+```sh
+npm run typecheck
+npm run build:server
+npm run test:multiplayer # Requires the local multiplayer server to be running.
+npm run build
+```
+
+See [the migration and deployment guide](docs/partyserver-migration.md) for the
+Cloudflare deployment, Vercel cutover, verification, and rollback steps.
+
 ## Technical notes
 
 A dump of random interesting tidbits.
@@ -12,11 +37,18 @@ A dump of random interesting tidbits.
 
 In each game, there's a server and multiple clients involved, all simulating what is happening in the game world.  The server is the authority and holds the authoritative state; it determines when a landing is successful, when a lander dies, etc.  The clients send input events to the server, and the server applies those events to its own simulation, and also broadcasts those events to other clients.  Periodically, the server also sends the entire state of the physics world to all clients, so the clients can make sure they have not strayed from the server.
 
-### Partykit server
+### PartyServer on Cloudflare
 
-[Partykit](https://www.partykit.io/) is an awesome service that allows you to easily and quickly, on-demand, spin up a "server" (backed by Cloudflare Durable Objects), which we can use as the authoritative server for a game. Clients connect to the server via websockets, and data is shuffled between them in real time.  Whenever a new game / room is created (by going to a different lander.gg url), a new Partykit server is automatically created to host that game.
+[PartyServer](https://github.com/cloudflare/partykit/tree/main/packages/partyserver)
+runs each game room in a Cloudflare Durable Object in your own account. Clients
+connect over WebSockets, and the server maintains the authoritative physics
+simulation. Each different game URL addresses a separate room. Deploy directly
+with Wrangler; the PartyKit managed hosting and CLI are no longer required.
 
-This was incredibly easy to get up and running!
+Hibernation is disabled because active matches depend on in-memory physics state
+and a 60 Hz timer. The engine and its timers are disposed when the last player
+disconnects. Matches and scores are ephemeral; this app does not persist room
+data. The Next.js frontend remains hosted separately on Vercel.
 
 ### Rapier2D physics engine
 
@@ -24,7 +56,7 @@ Combat Lander uses the [Rapier2D](https://rapier.rs/) physics engine.  It is wri
 
 * It [guarantees deterministic outcomes](https://rapier.rs/docs/user_guides/javascript/determinism), which is important when we are trying to run physics simulations across a server and multiple clients and need the outcomes to all match up.
 * It supports efficient [serialization and deserialization](https://rapier.rs/docs/user_guides/javascript/serialization) of the entire physics world state, which makes it easy to send snapshots of the state of the world between server and clients.
-* It runs well in both browser and node.js runtimes (as well as the partykit / cloudflare worker runtime!)
+* It runs well in browser and Node.js runtimes, as well as the Cloudflare Worker runtime.
 
 ### Syncing game state
 

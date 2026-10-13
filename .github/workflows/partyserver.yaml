@@ -1,0 +1,60 @@
+name: Deploy PartyServer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "party/**"
+      - "game/**"
+      - "messages.ts"
+      - "utils/**"
+      - "package*.json"
+      - "tsconfig.json"
+      - "wrangler.jsonc"
+      - ".github/workflows/partyserver.yaml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: partyserver-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build:server
+      - name: Verify multiplayer in the Workers runtime
+        env:
+          WRANGLER_SEND_METRICS: "false"
+        run: |
+          npm run dev:server > /tmp/partyserver.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          node --input-type=module <<'NODE'
+          for (let attempt = 0; attempt < 60; attempt++) {
+            try {
+              const response = await fetch('http://127.0.0.1:1999/health');
+              if (response.ok) process.exit(0);
+            } catch {}
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          throw new Error('Multiplayer server did not become ready');
+          NODE
+          npm run test:multiplayer
+      - name: Deploy multiplayer server
+        run: npm run deploy:server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

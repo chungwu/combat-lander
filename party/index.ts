@@ -1,24 +1,27 @@
 import { PACKR } from "@/game/packr";
 import { ServerLanderEngine } from "@/game/server-engine";
 import { ClientMessage } from "@/messages";
-import { ensure, randomSleep } from "@/utils/utils";
-import type * as Party from "partykit/server";
+import { ensure } from "@/utils/utils";
+import { routePartykitRequest, Server } from "partyserver";
+import type { Connection, ConnectionContext } from "partyserver";
 import { loadRapierWasm } from "./rapier-wasm";
 
 await loadRapierWasm();
 
-export default class Server implements Party.Server {
-  private _engine: ServerLanderEngine | undefined;
-  constructor(readonly room: Party.Room) {
-  }
+type Env = {
+  Main: DurableObjectNamespace<CombatLander>;
+};
 
-  async onStart() {
-  }
+export class CombatLander extends Server<Env> {
+  // The live physics simulation needs its in-memory state and 60 Hz timer.
+  static options = { hibernate: false };
+
+  private _engine: ServerLanderEngine | undefined;
 
   private async ensureInitialized() {
     if (!this._engine) {
-      console.log(`Initializing engine... ${this.room.id}`);
-      this._engine = new ServerLanderEngine(this.room);
+      console.log(`Initializing engine... ${this.name}`);
+      this._engine = new ServerLanderEngine(this);
     }
   }
 
@@ -26,12 +29,12 @@ export default class Server implements Party.Server {
     return ensure(this._engine);
   }
 
-  async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
+  async onConnect(conn: Connection, ctx: ConnectionContext) {
     // A websocket just connected!
     console.log(
       `Connected:
   id: ${conn.id}
-  room: ${this.room.id}
+  room: ${this.name}
   url: ${new URL(ctx.request.url).pathname}`
     );
 
@@ -42,30 +45,45 @@ export default class Server implements Party.Server {
     this.engine.onConnect(conn);
   }
 
-  async onMessage(message: string | Uint8Array | Buffer, sender: Party.Connection) {
-    // await randomSleep(3000);
+  async onMessage(sender: Connection, message: string | ArrayBuffer) {
     const msg = this.unpackMessage(message);
     this.engine.handleMessage(sender, msg);
   }
 
-  onClose(conn: Party.Connection) {
-    const connsLeft = Array.from(this.room.getConnections()).length;
+  onClose(conn: Connection) {
+    const connsLeft = Array.from(this.getConnections()).length;
     console.log(`Closed: ${conn.id}; now ${connsLeft} connections left`);
-    this.engine.onDisconnect(conn);
+    this._engine?.onDisconnect(conn);
 
     if (connsLeft === 0) {
-      this.engine.dispose();
+      this._engine?.dispose();
       this._engine = undefined;
     }
   }
 
-  private unpackMessage(message: string | Uint8Array | Buffer): ClientMessage {
+  private unpackMessage(message: string | ArrayBuffer): ClientMessage {
     if (typeof message === "string") {
       return JSON.parse(message);
     } else {
-      return PACKR.unpack(message);
+      return PACKR.unpack(new Uint8Array(message));
     }
   }
 }
 
-Server satisfies Party.Worker;
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+    if (url.pathname === "/health") {
+      return Response.json({ status: "ok", server: "combat-lander" });
+    }
+    // partysocket 0.0.25 uses this route when no party is specified.
+    if (url.pathname.startsWith("/party/")) {
+      url.pathname = url.pathname.replace("/party/", "/parties/main/");
+      request = new Request(url, request);
+    }
+    return (
+      (await routePartykitRequest(request, env)) ??
+      new Response("Not Found", { status: 404 })
+    );
+  },
+} satisfies ExportedHandler<Env>;

@@ -39,3 +39,8 @@ next-env.d.ts
 .partykit
 
 .env.local
+
+# Cloudflare local state and credentials
+.wrangler/
+.dev.vars
+.dev.vars.*
