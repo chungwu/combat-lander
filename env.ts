@@ -1,4 +1,6 @@
-export const PARTYKIT_HOST = process.env.NEXT_PUBLIC_PARTYKIT_HOST!;
+export const PARTYKIT_HOST =
+  process.env.NEXT_PUBLIC_PARTYSERVER_HOST ??
+  process.env.NEXT_PUBLIC_PARTYKIT_HOST!;
 
 export const PARTYKIT_PROTOCOL =
   PARTYKIT_HOST?.startsWith("localhost") ||
