@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "combat-lander-party",
+  "account_id": "c5487271e34248435bc6d79cb5bada33",
   "main": "party/index.ts",
   "compatibility_date": "2026-10-13",
   "compatibility_flags": ["nodejs_compat"],

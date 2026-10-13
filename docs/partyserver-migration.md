@@ -42,8 +42,9 @@ npx wrangler whoami
 npm run deploy:server
 ```
 
-Confirm `whoami` reports your intended account. If you have multiple accounts,
-set `CLOUDFLARE_ACCOUNT_ID` to the chosen account ID before deployment. Wrangler
+Confirm `whoami` reports your intended account. The configuration targets
+Cloudflare account `c5487271e34248435bc6d79cb5bada33`, verified during deployment.
+Set `CLOUDFLARE_ACCOUNT_ID` to override it for another account. Wrangler
 prints the actual `https://combat-lander-party.<subdomain>.workers.dev` URL. Use
 that returned URL; do not guess the account subdomain.
 
@@ -111,12 +112,14 @@ Configure these GitHub Actions secrets on `chungwu/combat-lander`:
 
 - `CLOUDFLARE_API_TOKEN`: a token scoped to the selected account with Workers
   Scripts edit and the account access needed for Wrangler deployment.
-- `CLOUDFLARE_ACCOUNT_ID`: the selected Cloudflare account ID.
+- `CLOUDFLARE_ACCOUNT_ID`: optional override for the account ID in `wrangler.jsonc`.
 
 Configure credentials directly in GitHub; never commit tokens. The
 `Deploy PartyServer` workflow runs on relevant changes to `main` and can also be
 started manually. Its install, typecheck, dry-run build, and multiplayer test in
 the local Workers runtime precede deployment.
+If the selected account has no `workers.dev` address, the workflow creates
+`chungwu-combat-lander.workers.dev`. An existing address is preserved.
 Frontend deployments continue through the existing Vercel Git integration.
 
 ## Rollback
