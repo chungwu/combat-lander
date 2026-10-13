@@ -2,7 +2,7 @@
 
 This is a real time multiplayer game inspired by the lunar lander arcade game. You compete for points by landing before your opponents do, or by damaging their landers with your rockets!
 
-You can play it at [combat-lander.vercel.app](https://combat-lander.vercel.app).
+You can play it at [lander.grapier.com](https://lander.grapier.com).
 
 ## Development and deployment
 
