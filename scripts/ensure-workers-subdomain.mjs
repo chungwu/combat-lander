@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 
 const config = JSON.parse(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8"));
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || config.account_id;
@@ -33,4 +33,8 @@ if (!/^[a-z0-9][a-z0-9-]*$/.test(subdomain ?? "")) {
   throw new Error("Cloudflare did not return a valid workers.dev subdomain");
 }
 console.log(`Workers account address: ${subdomain}.workers.dev`);
-console.log(`Multiplayer server address: https://${config.name}.${subdomain}.workers.dev`);
+const workerUrl = `https://${config.name}.${subdomain}.workers.dev`;
+console.log(`Multiplayer server address: ${workerUrl}`);
+if (process.env.GITHUB_OUTPUT) {
+  appendFileSync(process.env.GITHUB_OUTPUT, `worker_url=${workerUrl}\n`);
+}
