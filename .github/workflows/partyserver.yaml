@@ -9,6 +9,7 @@ on:
       - "game/**"
       - "messages.ts"
       - "utils/**"
+      - "scripts/**"
       - "package*.json"
       - "tsconfig.json"
       - "wrangler.jsonc"
@@ -53,6 +54,11 @@ jobs:
           throw new Error('Multiplayer server did not become ready');
           NODE
           npm run test:multiplayer
+      - name: Ensure workers.dev address exists
+        run: node scripts/ensure-workers-subdomain.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - name: Deploy multiplayer server
         run: npm run deploy:server
         env:
