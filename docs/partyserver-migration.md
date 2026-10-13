@@ -130,6 +130,14 @@ If the selected account has no `workers.dev` address, the workflow creates
 `chungwu-combat-lander.workers.dev`. An existing address is preserved.
 Frontend deployments continue through the existing Vercel Git integration.
 
+For browser verification, manually run `Deploy PartyServer` with
+`verify_frontend=true`. With a blank `game_url`, it builds and serves the
+selected commit locally and checks two players against the live Worker. Set
+`game_url=https://lander.gg` to verify the published site. This mode skips the
+server deployment job and does not receive Cloudflare credentials. It checks
+starting/joining a game, keyboard thrust, rockets, chat, canvas rendering, and
+the actual WebSocket hostname.
+
 ## Rollback
 
 Before October 23, if the old PartyKit server is still available, roll back to

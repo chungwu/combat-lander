@@ -64,6 +64,32 @@ jobs:
           throw new Error('Multiplayer server did not become ready');
           NODE
           npm run test:multiplayer
+      - name: Ensure workers.dev address exists
+        id: workers_address
+        run: node scripts/ensure-workers-subdomain.mjs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Deploy multiplayer server
+        run: npm run deploy:server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Verify live multiplayer
+        env:
+          SERVER_URL: ${{ steps.workers_address.outputs.worker_url }}
+        run: |
+          node --input-type=module <<'NODE'
+          for (let attempt = 0; attempt < 30; attempt++) {
+            try {
+              const response = await fetch(new URL('/health', process.env.SERVER_URL), { signal: AbortSignal.timeout(5000) });
+              if (response.ok) process.exit(0);
+            } catch {}
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+          throw new Error('Live multiplayer server did not become ready');
+          NODE
+          npm run test:multiplayer
   verify_frontend:
     if: ${{ inputs.verify_frontend }}
     runs-on: ubuntu-latest
@@ -101,29 +127,3 @@ jobs:
           throw new Error('Frontend did not become ready');
           NODE
           /tmp/combat-lander-browser-env/bin/python scripts/test-browser.py
-      - name: Ensure workers.dev address exists
-        id: workers_address
-        run: node scripts/ensure-workers-subdomain.mjs
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      - name: Deploy multiplayer server
-        run: npm run deploy:server
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      - name: Verify live multiplayer
-        env:
-          SERVER_URL: ${{ steps.workers_address.outputs.worker_url }}
-        run: |
-          node --input-type=module <<'NODE'
-          for (let attempt = 0; attempt < 30; attempt++) {
-            try {
-              const response = await fetch(new URL('/health', process.env.SERVER_URL), { signal: AbortSignal.timeout(5000) });
-              if (response.ok) process.exit(0);
-            } catch {}
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-          throw new Error('Live multiplayer server did not become ready');
-          NODE
-          npm run test:multiplayer

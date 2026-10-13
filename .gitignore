@@ -44,3 +44,7 @@ next-env.d.ts
 .wrangler/
 .dev.vars
 .dev.vars.*
+
+# Browser test driver
+__pycache__/
+*.pyc
